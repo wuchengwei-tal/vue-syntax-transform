@@ -1,0 +1,11 @@
+{
+  "name": "@vue-transform/v2-v3setup",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.ts",
+  "dependencies": {
+    "@babel/generator": "^7.20.13",
+    "@babel/traverse": "^7.20.13",
+    "@babel/types": "^7.20.7"
+  }
+}

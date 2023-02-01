@@ -1,0 +1,20 @@
+{
+    "name": "@vue-transform/reactivity-transfrom",
+    "version": "0.0.0",
+    "description": "",
+    "main": "src/index.ts",
+    "dependencies": {
+        "source-map": "^0.6.1",
+        "estree-walker": "^2.0.2",
+        "magic-string": "^0.25.7"
+    },
+    "devDependencies": {
+        "@vue/consolidate": "^0.17.3",
+        "@types/estree": "^0.0.48",
+        "@babel/types": "^7.16.0",
+        "@types/lru-cache": "^5.1.0",
+        "merge-source-map": "^1.1.0",
+        "hash-sum": "^2.0.0",
+        "lru-cache": "^5.1.1"
+    }
+}
