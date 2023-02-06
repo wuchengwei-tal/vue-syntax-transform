@@ -1,9 +1,9 @@
 import MagicString from 'magic-string'
 import {
   BindingMetadata,
-  BindingTypes,
   createRoot,
-  NodeTypes,
+  // NodeTypes,
+  // BindingTypes,
   transform,
   parserOptions,
   UNREF,
@@ -11,7 +11,8 @@ import {
   isFunctionType,
   walkIdentifiers
 } from '@vue/compiler-dom'
-import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
+import { NodeTypes, BindingTypes } from './data'
+import { SFCDescriptor, SFCScriptBlock } from '@vue/compiler-sfc'
 import {
   parse as _parse,
   parseExpression,
@@ -53,9 +54,11 @@ import { RawSourceMap } from 'source-map'
 // } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
-import { rewriteDefault } from './rewriteDefault'
+// import { rewriteDefault } from "./rewriteDefault";
 import { createCache } from './cache'
-import { shouldTransform, transformAST } from '@vue/reactivity-transform'
+import { shouldTransform, transformAST } from './reactivityTransform'
+
+export const DEFAULT_FILENAME = 'anonymous.vue'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -135,6 +138,12 @@ export interface ImportBinding {
   isFromSetup: boolean
   isUsedInTemplate: boolean
 }
+
+type FromNormalScript<T> = T & { __fromNormalScript?: boolean | null }
+type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
+type EmitsDeclType = FromNormalScript<
+  TSFunctionType | TSTypeLiteral | TSInterfaceBody
+>
 
 /**
  * Compile `<script setup>`
@@ -216,13 +225,13 @@ export function compileScript(
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
         const { importedHelpers } = transformAST(scriptAst, s, startOffset)
-        if (importedHelpers.length) {
-          s.prepend(
-            `import { ${importedHelpers
-              .map(h => `${h} as _${h}`)
-              .join(', ')} } from 'vue'\n`
-          )
-        }
+        // if (importedHelpers.length) {
+        //   s.prepend(
+        //     `import { ${importedHelpers
+        //       .map((h) => `${h} as _${h}`)
+        //       .join(", ")} } from 'vue'\n`
+        //   );
+        // }
         s.remove(0, startOffset)
         s.remove(endOffset, source.length)
         content = s.toString()
@@ -234,6 +243,16 @@ export function compileScript(
           }) as unknown as RawSourceMap
         }
       }
+      // if (cssVars.length) {
+      //   content = rewriteDefault(content, DEFAULT_VAR, plugins);
+      //   content += genNormalScriptCssVarsCode(
+      //     cssVars,
+      //     bindings,
+      //     scopeId,
+      //     isProd
+      //   );
+      //   content += `\nexport default ${DEFAULT_VAR}`;
+      // }
       return {
         ...script,
         content,
@@ -277,15 +296,11 @@ export function compileScript(
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
   let propsDestructureRestId: string | undefined
-  let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
+  let propsTypeDecl: PropsDeclType | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
   let emitsRuntimeDecl: Node | undefined
-  let emitsTypeDecl:
-    | TSFunctionType
-    | TSTypeLiteral
-    | TSInterfaceBody
-    | undefined
+  let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
   let hasAwait = false
@@ -375,6 +390,7 @@ export function compileScript(
   ) {
     // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
+
     let isUsedInTemplate = needTemplateUsageCheck
     if (
       needTemplateUsageCheck &&
@@ -426,7 +442,7 @@ export function compileScript(
       propsTypeDecl = resolveQualifiedType(
         propsTypeDeclRaw,
         node => node.type === 'TSTypeLiteral'
-      ) as TSTypeLiteral | TSInterfaceBody | undefined
+      ) as PropsDeclType | undefined
 
       if (!propsTypeDecl) {
         error(
@@ -557,7 +573,7 @@ export function compileScript(
       emitsTypeDecl = resolveQualifiedType(
         emitsTypeDeclRaw,
         node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
-      ) as TSFunctionType | TSTypeLiteral | TSInterfaceBody | undefined
+      ) as EmitsDeclType | undefined
 
       if (!emitsTypeDecl) {
         error(
@@ -657,7 +673,7 @@ export function compileScript(
   function resolveQualifiedType(
     node: Node,
     qualifier: (node: Node) => boolean
-  ) {
+  ): Node | undefined {
     if (qualifier(node)) {
       return node
     }
@@ -667,7 +683,8 @@ export function compileScript(
     ) {
       const refName = node.typeName.name
       const body = getAstBody()
-      for (const node of body) {
+      for (let i = 0; i < body.length; i++) {
+        const node = body[i]
         let qualified = isQualifiedType(
           node,
           qualifier,
@@ -680,6 +697,8 @@ export function compileScript(
             filterExtendsType(extendsTypes, bodies)
             qualified.body = bodies
           }
+          ;(qualified as FromNormalScript<Node>).__fromNormalScript =
+            scriptAst && i >= scriptSetupAst.body.length
           return qualified
         }
       }
@@ -867,8 +886,10 @@ export function compileScript(
     }
   }
 
-  function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
-    const scriptSetupSource = scriptSetup!.content
+  function genSetupPropsType(node: PropsDeclType) {
+    const scriptSource = node.__fromNormalScript
+      ? script!.content
+      : scriptSetup!.content
     if (hasStaticWithDefaults()) {
       // if withDefaults() is used, we need to remove the optional flags
       // on props that have default values
@@ -893,20 +914,19 @@ export function compileScript(
             res +=
               m.key.name +
               (m.type === 'TSMethodSignature' ? '()' : '') +
-              scriptSetupSource.slice(
+              scriptSource.slice(
                 m.typeAnnotation.start!,
                 m.typeAnnotation.end!
               ) +
               ', '
           } else {
-            res +=
-              scriptSetupSource.slice(m.start!, m.typeAnnotation.end!) + `, `
+            res += scriptSource.slice(m.start!, m.typeAnnotation.end!) + `, `
           }
         }
       }
       return (res.length ? res.slice(0, -2) : res) + ` }`
     } else {
-      return scriptSetupSource.slice(node.start!, node.end!)
+      return scriptSource.slice(node.start!, node.end!)
     }
   }
 
@@ -1182,13 +1202,6 @@ export function compileScript(
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(node.expression)) {
-        // defineExpose({}) -> expose({})
-        const callee = (node.expression as CallExpression).callee
-        s.overwrite(
-          callee.start! + startOffset,
-          callee.end! + startOffset,
-          'expose'
-        )
       }
     }
 
@@ -1414,6 +1427,18 @@ export function compileScript(
   }
 
   // 8. inject `useCssVars` calls
+  // if (
+  //   cssVars.length &&
+  //   // no need to do this when targeting SSR
+  //   !(options.inlineTemplate && options.templateOptions?.ssr)
+  // ) {
+  //   helperImports.add(CSS_VARS_HELPER);
+  //   helperImports.add("unref");
+  //   s.prependRight(
+  //     startOffset,
+  //     `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
+  //   );
+  // }
 
   // 9. finalize setup() argument signature
   let args = `__props`
@@ -1458,7 +1483,10 @@ export function compileScript(
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
     if (emitsTypeDecl) {
-      args += `: { emit: (${scriptSetup.content.slice(
+      const content = emitsTypeDecl.__fromNormalScript
+        ? script!.content
+        : scriptSetup.content
+      args += `: { emit: (${content.slice(
         emitsTypeDecl.start!,
         emitsTypeDecl.end!
       )}), expose: any, slots: any, attrs: any }`
@@ -1551,7 +1579,7 @@ export function compileScript(
       }
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
-      // css vars codegen 
+      // css vars codegen
       if (ast && ast.helpers.has(UNREF)) {
         helperImports.delete('unref')
       }
@@ -1616,8 +1644,7 @@ export function compileScript(
 
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
-  const exposeCall =
-    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
+  const exposeCall = ''
   // wrap setup code with function.
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
@@ -1653,15 +1680,6 @@ export function compileScript(
       )
       s.appendRight(endOffset, `}`)
     }
-  }
-
-  // 12. finalize Vue helper imports
-  if (helperImports.size > 0) {
-    s.prepend(
-      `import { ${[...helperImports]
-        .map(h => `${h} as _${h}`)
-        .join(', ')} } from 'vue'\n`
-    )
   }
 
   s.trim()
@@ -1995,14 +2013,18 @@ function extractEventNames(
   ) {
     const typeNode = eventName.typeAnnotation.typeAnnotation
     if (typeNode.type === 'TSLiteralType') {
-      if (typeNode.literal.type !== 'UnaryExpression') {
+      if (
+        typeNode.literal.type !== 'UnaryExpression' &&
+        typeNode.literal.type !== 'TemplateLiteral'
+      ) {
         emits.add(String(typeNode.literal.value))
       }
     } else if (typeNode.type === 'TSUnionType') {
       for (const t of typeNode.types) {
         if (
           t.type === 'TSLiteralType' &&
-          t.literal.type !== 'UnaryExpression'
+          t.literal.type !== 'UnaryExpression' &&
+          t.literal.type !== 'TemplateLiteral'
         ) {
           emits.add(String(t.literal.value))
         }

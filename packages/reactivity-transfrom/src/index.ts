@@ -1,12 +1,11 @@
-// API
-export { parse } from "./parse";
+export * from './data'
 export { compileTemplate } from "./compileTemplate";
 export { compileScript } from "./compileScript";
 export { rewriteDefault } from "./rewriteDefault";
 export {
-    shouldTransform as shouldTransformRef,
-    transform as transformRef,
-    transformAST as transformRefAST,
+  shouldTransform as shouldTransformRef,
+  transform as transformRef,
+  transformAST as transformRefAST,
 } from "@vue/reactivity-transform";
 
 // Utilities
@@ -18,24 +17,14 @@ export { MagicString };
 import { walk as _walk } from "estree-walker";
 export const walk = _walk as any;
 
-// Types
 export {
-    SFCParseOptions,
-    SFCParseResult,
-    SFCDescriptor,
-    SFCBlock,
-    SFCTemplateBlock,
-    SFCScriptBlock,
-    SFCStyleBlock,
-} from "./parse";
-export {
-    TemplateCompiler,
-    SFCTemplateCompileOptions,
-    SFCTemplateCompileResults,
+  TemplateCompiler,
+  SFCTemplateCompileOptions,
+  SFCTemplateCompileResults,
 } from "./compileTemplate";
 
 export { SFCScriptCompileOptions } from "./compileScript";
 export {
-    AssetURLOptions,
-    AssetURLTagConfig,
+  AssetURLOptions,
+  AssetURLTagConfig,
 } from "./templateTransformAssetUrl";

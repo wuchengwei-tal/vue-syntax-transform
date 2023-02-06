@@ -1,14 +1,15 @@
 import path from 'path'
 import {
-  ConstantTypes,
   createSimpleExpression,
   ExpressionNode,
   NodeTransform,
-  NodeTypes,
   SimpleExpressionNode,
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
+import { NodeTypes } from './data'
+
+import { ConstantTypes } from './data'
 import {
   isRelativeUrl,
   parseUrl,
