@@ -1,41 +1,46 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from "vscode";
-import { minimalEdit } from "./utils";
-import { transform } from "../../v2-v3setup";
+import { type ExtensionContext, window, commands } from 'vscode'
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+import { minimalEdit } from './utils'
+import { v2ToV3Setup } from '../../v2-v3setup'
+import { reactivityTransform } from '../../reactivity-transfrom'
 
-export function activate(context: vscode.ExtensionContext) {
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "a" is now active!');
+export function activate(context: ExtensionContext) {
+  const transform = (transformer: (s: string, id: string) => string) => {
+    return async () => {
+      const editor = window.activeTextEditor
+      if (!editor) return
+      const { document } = editor
+      if (!document) return
+      const src = document.getText()
 
-    // The command has been defined in the package.json file
-    // Now provide the implementation of the command with registerCommand
-    // The commandId parameter must match the command field in package.json
-    let disposable = vscode.commands.registerCommand(
-        "vue-transform.reactivityTransform",
-        async () => {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) return;
-            const { document } = editor;
-            if (!document) return;
-            const src = document.getText();
+      const { fileName } = editor.document
 
-            const result = transform(src);
-            const edit = minimalEdit(document, result);
-            await editor.edit((editBuilder) => {
-                editBuilder.replace(edit.range, edit.newText);
-            });
-            // The code you place here will be executed every time your command is executed
-            // Display a message box to the user
-            vscode.window.showInformationMessage("Hello World from a!");
-        }
-    );
+      const result = transformer(src, fileName)
+      const edit = minimalEdit(document, result)
+      await editor.edit(editBuilder => {
+        editBuilder.replace(edit.range, edit.newText)
+      })
 
-    context.subscriptions.push(disposable);
+      window.showInformationMessage('Done!')
+    }
+  }
+  const disposables = []
+
+  disposables.push(
+    commands.registerCommand(
+      'vue-transform.reactivityTransform',
+      transform(reactivityTransform)
+    )
+  )
+
+  disposables.push(
+    commands.registerCommand(
+      'vue-transform.v2ToV3Setup',
+      transform(v2ToV3Setup)
+    )
+  )
+
+  context.subscriptions.push(...disposables)
 }
 
 // This method is called when your extension is deactivated

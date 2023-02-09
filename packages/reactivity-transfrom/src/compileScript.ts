@@ -2,16 +2,16 @@ import MagicString from 'magic-string'
 import {
   BindingMetadata,
   createRoot,
-  // NodeTypes,
-  // BindingTypes,
   transform,
   parserOptions,
   UNREF,
   SimpleExpressionNode,
   isFunctionType,
-  walkIdentifiers
+  walkIdentifiers,
+  NodeTypes,
+  BindingTypes
 } from '@vue/compiler-dom'
-import { NodeTypes, BindingTypes } from './data'
+// import { NodeTypes, BindingTypes } from './data'
 import { SFCDescriptor, SFCScriptBlock } from '@vue/compiler-sfc'
 import {
   parse as _parse,
@@ -52,10 +52,9 @@ import { RawSourceMap } from 'source-map'
 //   genCssVarsCode,
 //   genNormalScriptCssVarsCode
 // } from './cssVars'
-import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
+import { SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 // import { rewriteDefault } from "./rewriteDefault";
-import { createCache } from './cache'
 import { shouldTransform, transformAST } from './reactivityTransform'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
@@ -175,8 +174,6 @@ export function compileScript(
     )
   }
 
-  const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
-  // const cssVars = sfc.cssVars
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS =
@@ -232,8 +229,11 @@ export function compileScript(
         //       .join(", ")} } from 'vue'\n`
         //   );
         // }
-        s.remove(0, startOffset)
-        s.remove(endOffset, source.length)
+
+        // if (__TEST__) {
+        //   s.remove(0, startOffset)
+        //   s.remove(endOffset, source.length)
+        // }
         content = s.toString()
         if (genSourceMap) {
           map = s.generateMap({
@@ -243,16 +243,6 @@ export function compileScript(
           }) as unknown as RawSourceMap
         }
       }
-      // if (cssVars.length) {
-      //   content = rewriteDefault(content, DEFAULT_VAR, plugins);
-      //   content += genNormalScriptCssVarsCode(
-      //     cssVars,
-      //     bindings,
-      //     scopeId,
-      //     isProd
-      //   );
-      //   content += `\nexport default ${DEFAULT_VAR}`;
-      // }
       return {
         ...script,
         content,
@@ -303,8 +293,6 @@ export function compileScript(
   let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
-  let hasAwait = false
-  let hasInlinedSsrRenderFn = false
   // props/emits declared via types
   const typeDeclaredProps: Record<string, PropTypeData> = {}
   const typeDeclaredEmits: Set<string> = new Set()
@@ -732,204 +720,6 @@ export function compileScript(
     })
   }
 
-  /**
-   * await foo()
-   * -->
-   * ;(
-   *   ([__temp,__restore] = withAsyncContext(() => foo())),
-   *   await __temp,
-   *   __restore()
-   * )
-   *
-   * const a = await foo()
-   * -->
-   * const a = (
-   *   ([__temp, __restore] = withAsyncContext(() => foo())),
-   *   __temp = await __temp,
-   *   __restore(),
-   *   __temp
-   * )
-   */
-  function processAwait(
-    node: AwaitExpression,
-    needSemi: boolean,
-    isStatement: boolean
-  ) {
-    const argumentStart =
-      node.argument.extra && node.argument.extra.parenthesized
-        ? (node.argument.extra.parenStart as number)
-        : node.argument.start!
-
-    const argumentStr = source.slice(
-      argumentStart + startOffset,
-      node.argument.end! + startOffset
-    )
-
-    const containsNestedAwait = /\bawait\b/.test(argumentStr)
-
-    s.overwrite(
-      node.start! + startOffset,
-      argumentStart + startOffset,
-      `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${helper(
-        `withAsyncContext`
-      )}(${containsNestedAwait ? `async ` : ``}() => `
-    )
-    s.appendLeft(
-      node.end! + startOffset,
-      `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
-        isStatement ? `` : `,\n  __temp`
-      }\n)`
-    )
-  }
-
-  /**
-   * check defaults. If the default object is an object literal with only
-   * static properties, we can directly generate more optimized default
-   * declarations. Otherwise we will have to fallback to runtime merging.
-   */
-  function hasStaticWithDefaults() {
-    return (
-      propsRuntimeDefaults &&
-      propsRuntimeDefaults.type === 'ObjectExpression' &&
-      propsRuntimeDefaults.properties.every(
-        node =>
-          (node.type === 'ObjectProperty' &&
-            (!node.computed || node.key.type.endsWith('Literal'))) ||
-          node.type === 'ObjectMethod'
-      )
-    )
-  }
-
-  function genRuntimeProps(props: Record<string, PropTypeData>) {
-    const keys = Object.keys(props)
-    if (!keys.length) {
-      return ``
-    }
-    const hasStaticDefaults = hasStaticWithDefaults()
-    const scriptSetupSource = scriptSetup!.content
-    let propsDecls = `{
-    ${keys
-      .map(key => {
-        let defaultString: string | undefined
-        const destructured = genDestructuredDefaultValue(key)
-        if (destructured) {
-          defaultString = `default: ${destructured}`
-        } else if (hasStaticDefaults) {
-          const prop = propsRuntimeDefaults!.properties.find(node => {
-            if (node.type === 'SpreadElement') return false
-            return resolveObjectKey(node.key, node.computed) === key
-          }) as ObjectProperty | ObjectMethod
-          if (prop) {
-            if (prop.type === 'ObjectProperty') {
-              // prop has corresponding static default value
-              defaultString = `default: ${scriptSetupSource.slice(
-                prop.value.start!,
-                prop.value.end!
-              )}`
-            } else {
-              defaultString = `${prop.async ? 'async ' : ''}${
-                prop.kind !== 'method' ? `${prop.kind} ` : ''
-              }default() ${scriptSetupSource.slice(
-                prop.body.start!,
-                prop.body.end!
-              )}`
-            }
-          }
-        }
-
-        const { type, required } = props[key]
-        if (!isProd) {
-          return `${key}: { type: ${toRuntimeTypeString(
-            type
-          )}, required: ${required}${
-            defaultString ? `, ${defaultString}` : ``
-          } }`
-        } else if (
-          type.some(
-            el =>
-              el === 'Boolean' ||
-              ((!hasStaticDefaults || defaultString) && el === 'Function')
-          )
-        ) {
-          // #4783 for boolean, should keep the type
-          // #7111 for function, if default value exists or it's not static, should keep it
-          // in production
-          return `${key}: { type: ${toRuntimeTypeString(type)}${
-            defaultString ? `, ${defaultString}` : ``
-          } }`
-        } else {
-          // production: checks are useless
-          return `${key}: ${defaultString ? `{ ${defaultString} }` : 'null'}`
-        }
-      })
-      .join(',\n    ')}\n  }`
-
-    if (propsRuntimeDefaults && !hasStaticDefaults) {
-      propsDecls = `${helper('mergeDefaults')}(${propsDecls}, ${source.slice(
-        propsRuntimeDefaults.start! + startOffset,
-        propsRuntimeDefaults.end! + startOffset
-      )})`
-    }
-
-    return `\n  props: ${propsDecls},`
-  }
-
-  function genDestructuredDefaultValue(key: string): string | undefined {
-    const destructured = propsDestructuredBindings[key]
-    if (destructured && destructured.default) {
-      const value = scriptSetup!.content.slice(
-        destructured.default.start!,
-        destructured.default.end!
-      )
-      const isLiteral = destructured.default.type.endsWith('Literal')
-      return isLiteral ? value : `() => (${value})`
-    }
-  }
-
-  function genSetupPropsType(node: PropsDeclType) {
-    const scriptSource = node.__fromNormalScript
-      ? script!.content
-      : scriptSetup!.content
-    if (hasStaticWithDefaults()) {
-      // if withDefaults() is used, we need to remove the optional flags
-      // on props that have default values
-      let res = `{ `
-      const members = node.type === 'TSTypeLiteral' ? node.members : node.body
-      for (const m of members) {
-        if (
-          (m.type === 'TSPropertySignature' ||
-            m.type === 'TSMethodSignature') &&
-          m.typeAnnotation &&
-          m.key.type === 'Identifier'
-        ) {
-          if (
-            propsRuntimeDefaults!.properties.some(p => {
-              if (p.type === 'SpreadElement') return false
-              return (
-                resolveObjectKey(p.key, p.computed) ===
-                (m.key as Identifier).name
-              )
-            })
-          ) {
-            res +=
-              m.key.name +
-              (m.type === 'TSMethodSignature' ? '()' : '') +
-              scriptSource.slice(
-                m.typeAnnotation.start!,
-                m.typeAnnotation.end!
-              ) +
-              ', '
-          } else {
-            res += scriptSource.slice(m.start!, m.typeAnnotation.end!) + `, `
-          }
-        }
-      }
-      return (res.length ? res.slice(0, -2) : res) + ` }`
-    } else {
-      return scriptSource.slice(node.start!, node.end!)
-    }
-  }
-
   // 0. parse both <script> and <script setup> blocks
   const scriptAst =
     script &&
@@ -984,7 +774,7 @@ export function compileScript(
   for (const node of scriptSetupAst.body) {
     if (node.type === 'ImportDeclaration') {
       // import declarations are moved to top
-      hoistNode(node)
+      // __TEST__ && hoistNode(node)
 
       // dedupe imports
       let removed = 0
@@ -1100,9 +890,6 @@ export function compileScript(
         }
 
         // export default { ... } --> const __default__ = { ... }
-        const start = node.start! + scriptStartOffset!
-        const end = node.declaration.start! + scriptStartOffset!
-        s.overwrite(start, end, `const ${DEFAULT_VAR} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
@@ -1110,32 +897,6 @@ export function compileScript(
         if (defaultSpecifier) {
           defaultExport = node
           // 1. remove specifier
-          if (node.specifiers.length > 1) {
-            s.remove(
-              defaultSpecifier.start! + scriptStartOffset!,
-              defaultSpecifier.end! + scriptStartOffset!
-            )
-          } else {
-            s.remove(
-              node.start! + scriptStartOffset!,
-              node.end! + scriptStartOffset!
-            )
-          }
-          if (node.source) {
-            // export { x as default } from './x'
-            // rewrite to `import { x as __default__ } from './x'` and
-            // add to top
-            s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${DEFAULT_VAR} } from '${node.source.value}'\n`
-            )
-          } else {
-            // export { x as default }
-            // rewrite to `const __default__ = x` and move to end
-            s.appendLeft(
-              scriptEndOffset!,
-              `\nconst ${DEFAULT_VAR} = ${defaultSpecifier.local.name}\n`
-            )
-          }
         }
         if (node.declaration) {
           walkDeclaration(node.declaration, scriptBindings, vueImportAliases)
@@ -1170,9 +931,9 @@ export function compileScript(
     if (scriptStartOffset! > startOffset) {
       // if content doesn't end with newline, add one
       if (!/\n$/.test(script.content.trim())) {
-        s.appendLeft(scriptEndOffset!, `\n`)
+        // s.appendLeft(scriptEndOffset!, `\n`)
       }
-      s.move(scriptStartOffset!, scriptEndOffset!, 0)
+      // s.move(scriptStartOffset!, scriptEndOffset!, 0)
     }
   }
 
@@ -1200,14 +961,14 @@ export function compileScript(
         processDefineEmits(node.expression) ||
         processWithDefaults(node.expression)
       ) {
-        s.remove(node.start! + startOffset, node.end! + startOffset)
+        // s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(node.expression)) {
       }
     }
 
     if (node.type === 'VariableDeclaration' && !node.declare) {
       const total = node.declarations.length
-      let left = total
+      // let left = total
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
         if (decl.init) {
@@ -1217,21 +978,6 @@ export function compileScript(
             processWithDefaults(decl.init, decl.id, node.kind)
           const isDefineEmits = processDefineEmits(decl.init, decl.id)
           if (isDefineProps || isDefineEmits) {
-            if (left === 1) {
-              s.remove(node.start! + startOffset, node.end! + startOffset)
-            } else {
-              let start = decl.start! + startOffset
-              let end = decl.end! + startOffset
-              if (i === 0) {
-                // first one, locate the start of the next
-                end = node.declarations[i + 1].start! + startOffset
-              } else {
-                // not first one, locate the end of the prev
-                start = node.declarations[i - 1].end! + startOffset
-              }
-              s.remove(start, end)
-              left--
-            }
           }
         }
       }
@@ -1245,48 +991,6 @@ export function compileScript(
       !node.declare
     ) {
       walkDeclaration(node, setupBindings, vueImportAliases)
-    }
-
-    // walk statements & named exports / variable declarations for top level
-    // await
-    if (
-      (node.type === 'VariableDeclaration' && !node.declare) ||
-      node.type.endsWith('Statement')
-    ) {
-      const scope: Statement[][] = [scriptSetupAst.body]
-      ;(walk as any)(node, {
-        enter(child: Node, parent: Node) {
-          if (isFunctionType(child)) {
-            this.skip()
-          }
-          if (child.type === 'BlockStatement') {
-            scope.push(child.body)
-          }
-          if (child.type === 'AwaitExpression') {
-            hasAwait = true
-            // if the await expression is an expression statement and
-            // - is in the root scope
-            // - or is not the first statement in a nested block scope
-            // then it needs a semicolon before the generated code.
-            const currentScope = scope[scope.length - 1]
-            const needsSemi = currentScope.some((n, i) => {
-              return (
-                (scope.length === 1 || i > 0) &&
-                n.type === 'ExpressionStatement' &&
-                n.start === child.start
-              )
-            })
-            processAwait(
-              child,
-              needsSemi,
-              parent.type === 'ExpressionStatement'
-            )
-          }
-        },
-        exit(node: Node) {
-          if (node.type === 'BlockStatement') scope.pop()
-        }
-      })
     }
 
     if (
@@ -1316,7 +1020,7 @@ export function compileScript(
         (node.type === 'VariableDeclaration' && node.declare)
       ) {
         recordType(node, declaredTypes)
-        hoistNode(node)
+        // __TEST__ && hoistNode(node)
       }
     }
   }
@@ -1357,23 +1061,24 @@ export function compileScript(
   checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
 
   // 6. remove non-script content
-  if (script) {
-    if (startOffset < scriptStartOffset!) {
-      // <script setup> before <script>
-      s.remove(0, startOffset)
-      s.remove(endOffset, scriptStartOffset!)
-      s.remove(scriptEndOffset!, source.length)
-    } else {
-      // <script> before <script setup>
-      s.remove(0, scriptStartOffset!)
-      s.remove(scriptEndOffset!, startOffset)
-      s.remove(endOffset, source.length)
-    }
-  } else {
-    // only <script setup>
-    s.remove(0, startOffset)
-    s.remove(endOffset, source.length)
-  }
+  // if (__TEST__)
+  //   if (script) {
+  //     if (startOffset < scriptStartOffset!) {
+  //       // <script setup> before <script>
+  //       s.remove(0, startOffset)
+  //       s.remove(endOffset, scriptStartOffset!)
+  //       s.remove(scriptEndOffset!, source.length)
+  //     } else {
+  //       // <script> before <script setup>
+  //       s.remove(0, scriptStartOffset!)
+  //       s.remove(scriptEndOffset!, startOffset)
+  //       s.remove(endOffset, source.length)
+  //     }
+  //   } else {
+  //     // only <script setup>
+  //     s.remove(0, startOffset)
+  //     s.remove(endOffset, source.length)
+  //   }
 
   // 7. analyze binding metadata
   if (scriptAst) {
@@ -1427,260 +1132,10 @@ export function compileScript(
   }
 
   // 8. inject `useCssVars` calls
-  // if (
-  //   cssVars.length &&
-  //   // no need to do this when targeting SSR
-  //   !(options.inlineTemplate && options.templateOptions?.ssr)
-  // ) {
-  //   helperImports.add(CSS_VARS_HELPER);
-  //   helperImports.add("unref");
-  //   s.prependRight(
-  //     startOffset,
-  //     `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
-  //   );
-  // }
-
   // 9. finalize setup() argument signature
-  let args = `__props`
-  if (propsTypeDecl) {
-    // mark as any and only cast on assignment
-    // since the user defined complex types may be incompatible with the
-    // inferred type from generated runtime declarations
-    args += `: any`
-  }
-  // inject user assignment of props
-  // we use a default __props so that template expressions referencing props
-  // can use it directly
-  if (propsIdentifier) {
-    s.prependLeft(
-      startOffset,
-      `\nconst ${propsIdentifier} = __props${
-        propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
-      };\n`
-    )
-  }
-  if (propsDestructureRestId) {
-    s.prependLeft(
-      startOffset,
-      `\nconst ${propsDestructureRestId} = ${helper(
-        `createPropsRestProxy`
-      )}(__props, ${JSON.stringify(Object.keys(propsDestructuredBindings))});\n`
-    )
-  }
-  // inject temp variables for async context preservation
-  if (hasAwait) {
-    const any = isTS ? `: any` : ``
-    s.prependLeft(startOffset, `\nlet __temp${any}, __restore${any}\n`)
-  }
-
-  const destructureElements =
-    hasDefineExposeCall || !options.inlineTemplate ? [`expose`] : []
-  if (emitIdentifier) {
-    destructureElements.push(
-      emitIdentifier === `emit` ? `emit` : `emit: ${emitIdentifier}`
-    )
-  }
-  if (destructureElements.length) {
-    args += `, { ${destructureElements.join(', ')} }`
-    if (emitsTypeDecl) {
-      const content = emitsTypeDecl.__fromNormalScript
-        ? script!.content
-        : scriptSetup.content
-      args += `: { emit: (${content.slice(
-        emitsTypeDecl.start!,
-        emitsTypeDecl.end!
-      )}), expose: any, slots: any, attrs: any }`
-    }
-  }
-
   // 10. generate return statement
-  let returned
-  if (!options.inlineTemplate || (!sfc.template && hasDefaultExportRender)) {
-    // non-inline mode, or has manual render in normal <script>
-    // return bindings from script and script setup
-    const allBindings: Record<string, any> = {
-      ...scriptBindings,
-      ...setupBindings
-    }
-    for (const key in userImports) {
-      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
-        allBindings[key] = true
-      }
-    }
-    returned = `{ `
-    for (const key in allBindings) {
-      if (
-        allBindings[key] === true &&
-        userImports[key].source !== 'vue' &&
-        !userImports[key].source.endsWith('.vue')
-      ) {
-        // generate getter for import bindings
-        // skip vue imports since we know they will never change
-        returned += `get ${key}() { return ${key} }, `
-      } else if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
-        // local let binding, also add setter
-        const setArg = key === 'v' ? `_v` : `v`
-        returned +=
-          `get ${key}() { return ${key} }, ` +
-          `set ${key}(${setArg}) { ${key} = ${setArg} }, `
-      } else {
-        returned += `${key}, `
-      }
-    }
-    returned = returned.replace(/, $/, '') + ` }`
-  } else {
-    // inline mode
-    if (sfc.template && !sfc.template.src) {
-      if (options.templateOptions && options.templateOptions.ssr) {
-        hasInlinedSsrRenderFn = true
-      }
-      // inline render function mode - we are going to compile the template and
-      // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
-        filename,
-        source: sfc.template.content,
-        inMap: sfc.template.map,
-        ...options.templateOptions,
-        id: scopeId,
-        scoped: sfc.styles.some(s => s.scoped),
-        isProd: options.isProd,
-        ssrCssVars: sfc.cssVars,
-        compilerOptions: {
-          ...(options.templateOptions &&
-            options.templateOptions.compilerOptions),
-          inline: true,
-          isTS,
-          bindingMetadata
-        }
-      })
-      if (tips.length) {
-        tips.forEach(warnOnce)
-      }
-      const err = errors[0]
-      if (typeof err === 'string') {
-        throw new Error(err)
-      } else if (err) {
-        if (err.loc) {
-          err.message +=
-            `\n\n` +
-            sfc.filename +
-            '\n' +
-            generateCodeFrame(
-              source,
-              err.loc.start.offset,
-              err.loc.end.offset
-            ) +
-            `\n`
-        }
-        throw err
-      }
-      if (preamble) {
-        s.prepend(preamble)
-      }
-      // avoid duplicated unref import
-      // as this may get injected by the render function preamble OR the
-      // css vars codegen
-      if (ast && ast.helpers.has(UNREF)) {
-        helperImports.delete('unref')
-      }
-      returned = code
-    } else {
-      returned = `() => {}`
-    }
-  }
-
-  if (!options.inlineTemplate && !__TEST__) {
-    // in non-inline mode, the `__isScriptSetup: true` flag is used by
-    // componentPublicInstance proxy to allow properties that start with $ or _
-    s.appendRight(
-      endOffset,
-      `\nconst __returned__ = ${returned}\n` +
-        `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
-        `return __returned__` +
-        `\n}\n\n`
-    )
-  } else {
-    s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
-  }
-
   // 11. finalize default export
-  let runtimeOptions = ``
-  if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
-    const match = filename.match(/([^/\\]+)\.\w+$/)
-    if (match) {
-      runtimeOptions += `\n  __name: '${match[1]}',`
-    }
-  }
-  if (hasInlinedSsrRenderFn) {
-    runtimeOptions += `\n  __ssrInlineRender: true,`
-  }
-  if (propsRuntimeDecl) {
-    let declCode = scriptSetup.content
-      .slice(propsRuntimeDecl.start!, propsRuntimeDecl.end!)
-      .trim()
-    if (propsDestructureDecl) {
-      const defaults: string[] = []
-      for (const key in propsDestructuredBindings) {
-        const d = genDestructuredDefaultValue(key)
-        if (d) defaults.push(`${key}: ${d}`)
-      }
-      if (defaults.length) {
-        declCode = `${helper(
-          `mergeDefaults`
-        )}(${declCode}, {\n  ${defaults.join(',\n  ')}\n})`
-      }
-    }
-    runtimeOptions += `\n  props: ${declCode},`
-  } else if (propsTypeDecl) {
-    runtimeOptions += genRuntimeProps(typeDeclaredProps)
-  }
-  if (emitsRuntimeDecl) {
-    runtimeOptions += `\n  emits: ${scriptSetup.content
-      .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
-      .trim()},`
-  } else if (emitsTypeDecl) {
-    runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
-  }
-
-  // <script setup> components are closed by default. If the user did not
-  // explicitly call `defineExpose`, call expose() with no args.
-  const exposeCall = ''
-  // wrap setup code with function.
-  if (isTS) {
-    // for TS, make sure the exported type is still valid type with
-    // correct props information
-    // we have to use object spread for types to be merged properly
-    // user's TS setting should compile it down to proper targets
-    // export default defineComponent({ ...__default__, ... })
-    const def = defaultExport ? `\n  ...${DEFAULT_VAR},` : ``
-    s.prependLeft(
-      startOffset,
-      `\nexport default /*#__PURE__*/${helper(
-        `defineComponent`
-      )}({${def}${runtimeOptions}\n  ${
-        hasAwait ? `async ` : ``
-      }setup(${args}) {\n${exposeCall}`
-    )
-    s.appendRight(endOffset, `})`)
-  } else {
-    if (defaultExport) {
-      // without TS, can't rely on rest spread, so we use Object.assign
-      // export default Object.assign(__default__, { ... })
-      s.prependLeft(
-        startOffset,
-        `\nexport default /*#__PURE__*/Object.assign(${DEFAULT_VAR}, {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
-      )
-      s.appendRight(endOffset, `})`)
-    } else {
-      s.prependLeft(
-        startOffset,
-        `\nexport default {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
-      )
-      s.appendRight(endOffset, `}`)
-    }
-  }
+  // 12. finalize Vue helper imports
 
   s.trim()
 
@@ -2207,7 +1662,7 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
   return []
 }
 
-const templateUsageCheckCache = createCache<string>()
+const templateUsageCheckCache = new Map<string, string>()
 
 function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   const { content, ast } = sfc.template!

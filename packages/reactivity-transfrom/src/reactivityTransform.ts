@@ -342,7 +342,7 @@ export function transformAST(
         s.overwrite(
           call.start! + offset,
           call.start! + method.length + offset,
-          (method.slice(1))
+          method.slice(1)
         )
       } else {
         error(`${method}() cannot be used with destructure patterns.`, call)
@@ -554,17 +554,17 @@ export function transformAST(
               if (escapeScope) {
                 // prop binding in $$()
                 // { prop } -> { prop: __props_prop }
-                registerEscapedPropBinding(id)
-                s.appendLeft(
-                  id.end! + offset,
-                  `: __props_${propsLocalToPublicMap[id.name]}`
-                )
+                // registerEscapedPropBinding(id)
+                // s.appendLeft(
+                //   id.end! + offset,
+                //   `: __props_${propsLocalToPublicMap[id.name]}`
+                // )
               } else {
                 // { prop } -> { prop: __props.prop }
-                s.appendLeft(
-                  id.end! + offset,
-                  `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
-                )
+                // s.appendLeft(
+                //   id.end! + offset,
+                //   `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
+                // )
               }
             } else {
               // { foo } -> { foo: foo.value }
@@ -575,19 +575,19 @@ export function transformAST(
           if (isProp) {
             if (escapeScope) {
               // x --> __props_x
-              registerEscapedPropBinding(id)
-              s.overwrite(
-                id.start! + offset,
-                id.end! + offset,
-                `__props_${propsLocalToPublicMap[id.name]}`
-              )
+              // registerEscapedPropBinding(id)
+              // s.overwrite(
+              //   id.start! + offset,
+              //   id.end! + offset,
+              //   `__props_${propsLocalToPublicMap[id.name]}`
+              // )
             } else {
               // x --> __props.x
-              s.overwrite(
-                id.start! + offset,
-                id.end! + offset,
-                genPropsAccessExp(propsLocalToPublicMap[id.name])
-              )
+              // s.overwrite(
+              //   id.start! + offset,
+              //   id.end! + offset,
+              //   genPropsAccessExp(propsLocalToPublicMap[id.name])
+              // )
             }
           } else {
             // x --> x.value
@@ -760,19 +760,3 @@ export function transformAST(
 }
 
 const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`
-const hasWarned: Record<string, boolean> = {}
-
-function warnOnce(msg: string) {
-  const isNodeProd =
-    typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
-  if (!isNodeProd && !__TEST__ && !hasWarned[msg]) {
-    hasWarned[msg] = true
-    warn(msg)
-  }
-}
-
-function warn(msg: string) {
-  console.warn(
-    `\x1b[1m\x1b[33m[@vue/reactivity-transform]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
-  )
-}

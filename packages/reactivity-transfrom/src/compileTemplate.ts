@@ -104,7 +104,7 @@ export function compileTemplate(
   const { preprocessLang, preprocessCustomRequire } = options
 
   if (
-    (__ESM_BROWSER__ || __GLOBAL__) &&
+    // (__ESM_BROWSER__ || __GLOBAL__) &&
     preprocessLang &&
     !preprocessCustomRequire
   ) {
@@ -200,9 +200,9 @@ function doCompileTemplate({
     hoistStatic: true,
     cacheHandlers: true,
     ssrCssVars: '',
-      // ssr && ssrCssVars && ssrCssVars.length
-      //   ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
-      //   : '',
+    // ssr && ssrCssVars && ssrCssVars.length
+    //   ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
+    //   : '',
     scopeId: scoped ? longId : undefined,
     slotted,
     sourceMap: true,

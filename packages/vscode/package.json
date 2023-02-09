@@ -16,6 +16,10 @@
       {
         "command": "vue-transform.reactivityTransform",
         "title": "Vue Reactivity Transform"
+      },
+      {
+        "command": "vue-transform.v2ToV3Setup",
+        "title": "Vue2 to Vue3 Setup Syntax"
       }
     ]
   },
