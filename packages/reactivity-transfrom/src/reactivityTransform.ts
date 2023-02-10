@@ -293,11 +293,16 @@ export function transformAST(
         isCall &&
         (refCall = isRefCreationCall((decl as any).init.callee.name))
       ) {
+        const isConst = stmt.kind === 'const'
+        if (!isConst && stmt.start) {
+          s.overwrite(stmt.start + offset, stmt.start + offset + 3, 'const')
+        }
+
         processRefDeclaration(
           refCall,
           decl.id,
           decl.init as CallExpression,
-          stmt.kind === 'const'
+          isConst
         )
       } else {
         const isProps =

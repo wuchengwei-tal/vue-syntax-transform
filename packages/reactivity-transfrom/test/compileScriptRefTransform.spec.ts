@@ -24,10 +24,10 @@ describe('sfc ref transform', () => {
     expect(content).not.toMatch(`$(ref())`)
     expect(content).not.toMatch(`$(ref(1))`)
     expect(content).not.toMatch(`$(shallowRef({`)
-    expect(content).toMatch(`let foo = (ref())`)
-    expect(content).toMatch(`let a = (ref(1))`)
+    expect(content).toMatch(`const foo = (ref())`)
+    expect(content).toMatch(`const a = (ref(1))`)
     expect(content).toMatch(`
-      let b = (shallowRef({
+      const b = (shallowRef({
         count: 0
       }))
       `)
@@ -59,10 +59,10 @@ describe('sfc ref transform', () => {
     expect(content).not.toMatch(`$ref()`)
     expect(content).not.toMatch(`$ref(1)`)
     expect(content).not.toMatch(`$shallowRef({`)
-    expect(content).toMatch(`let foo = ref()`)
-    expect(content).toMatch(`let a = ref(1)`)
+    expect(content).toMatch(`const foo = ref()`)
+    expect(content).toMatch(`const a = ref(1)`)
     expect(content).toMatch(`
-      let b = shallowRef({
+      const b = shallowRef({
         count: 0
       })
       `)
@@ -91,7 +91,7 @@ describe('sfc ref transform', () => {
       </script>`)
 
     expect(content).not.toMatch(`$ref(0)`)
-    expect(content).toMatch(`let count = ref(0)`)
+    expect(content).toMatch(`const count = ref(0)`)
     expect(content).toMatch(`count.value++`)
     expect(content).toMatch(`return ({ count })`)
     assertCode(content)
@@ -104,8 +104,8 @@ describe('sfc ref transform', () => {
           let bar = $ref <string | number>('bar');
         </script>
       `)
-    expect(content).toMatch(`let msg = ref<string | number>('foo')`)
-    expect(content).toMatch(`let bar = ref <string | number>('bar')`)
+    expect(content).toMatch(`const msg = ref<string | number>('foo')`)
+    expect(content).toMatch(`const bar = ref <string | number>('bar')`)
     assertCode(content)
   })
 
@@ -124,8 +124,8 @@ describe('sfc ref transform', () => {
       }
       </script>`)
 
-    expect(content).toMatch(`let a = ref(0)`)
-    expect(content).toMatch(`let b = ref(0)`)
+    expect(content).toMatch(`const a = ref(0)`)
+    expect(content).toMatch(`const b = ref(0)`)
 
     // root level ref binding declared in <script> should be inherited in <script setup>
     expect(content).toMatch(`a.value++`)

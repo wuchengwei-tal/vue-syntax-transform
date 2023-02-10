@@ -263,7 +263,7 @@ exports[`SFC compile <script setup> > errors > should allow defineProps/Emit() r
 exports[`SFC compile <script setup> > imports > dedupe between user & helper 1`] = `
 "import { ref } from 'vue'
       
-      let foo = ref(1)"
+      const foo = ref(1)"
 `;
 
 exports[`SFC compile <script setup> > imports > import dedupe between <script> and <script setup> 1`] = `
