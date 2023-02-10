@@ -103,22 +103,22 @@ export function compileTemplate(
 ): SFCTemplateCompileResults {
   const { preprocessLang, preprocessCustomRequire } = options
 
-  if (
-    // (__ESM_BROWSER__ || __GLOBAL__) &&
-    preprocessLang &&
-    !preprocessCustomRequire
-  ) {
-    throw new Error(
-      `[@vue/compiler-sfc] Template preprocessing in the browser build must ` +
-        `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
-        `version of the preprocessor in the shape of { render(): string }.`
-    )
-  }
+  // if (
+  //   // false &&
+  //   preprocessLang &&
+  //   !preprocessCustomRequire
+  // ) {
+  //   throw new Error(
+  //     `[@vue/compiler-sfc] Template preprocessing in the browser build must ` +
+  //       `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
+  //       `version of the preprocessor in the shape of { render(): string }.`
+  //   )
+  // }
 
   const preprocessor = preprocessLang
     ? preprocessCustomRequire
       ? preprocessCustomRequire(preprocessLang)
-      : __ESM_BROWSER__
+      : false
       ? undefined
       : consolidate[preprocessLang as keyof typeof consolidate]
     : false

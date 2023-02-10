@@ -8,10 +8,10 @@ import {
   SimpleExpressionNode,
   isFunctionType,
   walkIdentifiers,
-  NodeTypes,
-  BindingTypes
+  // NodeTypes,
+  // BindingTypes
 } from '@vue/compiler-dom'
-// import { NodeTypes, BindingTypes } from './data'
+import { NodeTypes, BindingTypes } from './data'
 import { SFCDescriptor, SFCScriptBlock } from '@vue/compiler-sfc'
 import {
   parse as _parse,
@@ -230,10 +230,10 @@ export function compileScript(
         //   );
         // }
 
-        // if (__TEST__) {
-        //   s.remove(0, startOffset)
-        //   s.remove(endOffset, source.length)
-        // }
+        if (__TEST__) {
+          s.remove(0, startOffset)
+          s.remove(endOffset, source.length)
+        }
         content = s.toString()
         if (genSourceMap) {
           map = s.generateMap({
@@ -774,7 +774,7 @@ export function compileScript(
   for (const node of scriptSetupAst.body) {
     if (node.type === 'ImportDeclaration') {
       // import declarations are moved to top
-      // __TEST__ && hoistNode(node)
+      __TEST__ && hoistNode(node)
 
       // dedupe imports
       let removed = 0
@@ -1020,7 +1020,7 @@ export function compileScript(
         (node.type === 'VariableDeclaration' && node.declare)
       ) {
         recordType(node, declaredTypes)
-        // __TEST__ && hoistNode(node)
+        __TEST__ && hoistNode(node)
       }
     }
   }
@@ -1061,24 +1061,24 @@ export function compileScript(
   checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
 
   // 6. remove non-script content
-  // if (__TEST__)
-  //   if (script) {
-  //     if (startOffset < scriptStartOffset!) {
-  //       // <script setup> before <script>
-  //       s.remove(0, startOffset)
-  //       s.remove(endOffset, scriptStartOffset!)
-  //       s.remove(scriptEndOffset!, source.length)
-  //     } else {
-  //       // <script> before <script setup>
-  //       s.remove(0, scriptStartOffset!)
-  //       s.remove(scriptEndOffset!, startOffset)
-  //       s.remove(endOffset, source.length)
-  //     }
-  //   } else {
-  //     // only <script setup>
-  //     s.remove(0, startOffset)
-  //     s.remove(endOffset, source.length)
-  //   }
+  if (__TEST__)
+    if (script) {
+      if (startOffset < scriptStartOffset!) {
+        // <script setup> before <script>
+        s.remove(0, startOffset)
+        s.remove(endOffset, scriptStartOffset!)
+        s.remove(scriptEndOffset!, source.length)
+      } else {
+        // <script> before <script setup>
+        s.remove(0, scriptStartOffset!)
+        s.remove(scriptEndOffset!, startOffset)
+        s.remove(endOffset, source.length)
+      }
+    } else {
+      // only <script setup>
+      s.remove(0, startOffset)
+      s.remove(endOffset, source.length)
+    }
 
   // 7. analyze binding metadata
   if (scriptAst) {
