@@ -3,6 +3,10 @@
     "version": "0.0.0",
     "description": "",
     "main": "index.ts",
+    "scripts": {
+        "compile": "tsup",
+        "watch": "tsup --watch src"
+    },
     "dependencies": {
         "source-map": "^0.6.1",
         "estree-walker": "^2.0.2",

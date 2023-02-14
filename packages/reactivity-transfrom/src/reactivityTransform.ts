@@ -1,4 +1,4 @@
-import {
+import type {
   Node,
   Identifier,
   BlockStatement,
@@ -23,8 +23,8 @@ import {
   isReferencedIdentifier,
   isStaticProperty,
   walkFunctionParams
-} from '@vue/compiler-core'
-import { parse, ParserPlugin } from '@babel/parser'
+} from './core'
+import type { ParserPlugin } from '@babel/parser'
 import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
@@ -62,45 +62,6 @@ export interface ImportBinding {
   imported: string
   source: string
   specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
-}
-
-export function transform(
-  src: string,
-  {
-    filename,
-    sourceMap,
-    parserPlugins,
-    importHelpersFrom = 'vue'
-  }: RefTransformOptions = {}
-): RefTransformResults {
-  const plugins: ParserPlugin[] = parserPlugins || []
-  if (filename) {
-    if (/\.tsx?$/.test(filename)) {
-      plugins.push('typescript')
-    }
-    if (filename.endsWith('x')) {
-      plugins.push('jsx')
-    }
-  }
-
-  const ast = parse(src, {
-    sourceType: 'module',
-    plugins
-  })
-  const s = new MagicString(src)
-  const res = transformAST(ast.program, s, 0)
-
-  return {
-    ...res,
-    code: s.toString(),
-    map: sourceMap
-      ? s.generateMap({
-          source: filename,
-          hires: true,
-          includeContent: true
-        })
-      : null
-  }
 }
 
 export function transformAST(

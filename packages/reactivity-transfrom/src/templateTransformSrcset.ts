@@ -4,10 +4,12 @@ import {
   createSimpleExpression,
   ExpressionNode,
   NodeTransform,
+  // NodeTypes,
+  // ConstantTypes,
   SimpleExpressionNode
 } from '@vue/compiler-core'
-import { NodeTypes } from './data'
-import { ConstantTypes } from './data'
+import { NodeTypes,ConstantTypes } from './data'
+
 import {
   isRelativeUrl,
   parseUrl,

@@ -5,11 +5,12 @@ import {
   NodeTransform,
   SimpleExpressionNode,
   SourceLocation,
-  TransformContext
+  TransformContext,
+  // ConstantTypes,
+  // NodeTypes
 } from '@vue/compiler-core'
-import { NodeTypes } from './data'
+import { NodeTypes, ConstantTypes } from './data'
 
-import { ConstantTypes } from './data'
 import {
   isRelativeUrl,
   parseUrl,

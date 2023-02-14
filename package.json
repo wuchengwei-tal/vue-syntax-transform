@@ -10,7 +10,8 @@
     "@vue/compiler-core": "^3.2.47",
     "@vue/compiler-dom": "^3.2.47",
     "@vue/compiler-sfc": "^3.2.47",
-    "@vue/shared": "^3.2.47"
+    "@vue/shared": "^3.2.47",
+    "tsup": "^6.6.2"
   },
   "devDependencies": {
     "@babel/parser": "^7.20.13",

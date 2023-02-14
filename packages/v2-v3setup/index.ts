@@ -1,7 +1,7 @@
 import { component_transform } from './component_transform'
 
 export function v2ToV3Setup(code?: string, id?: string) {
-  if (!code) return ''
+  if (!code) return { content: '' }
   const scriptRe = /<script.*>((?:.|\n)*)<\/script>/
   const templateRe = /<template.*>((?:.|\n)*)<\/template>/
   const styleRe = /<style.*>((?:.|\n)*)<\/style>/
@@ -29,7 +29,7 @@ ${script}\n\n
 ${template}\n\n
 ${style}\n
 `
-  return code
+  return { content: code }
 }
 
 function transformSript(script: string) {

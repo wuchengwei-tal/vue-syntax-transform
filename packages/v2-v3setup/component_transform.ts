@@ -1,3 +1,4 @@
+// @ts-nocheck
 import fs from "fs";
 import * as t from "@babel/types";
 import * as parser from "@babel/parser";

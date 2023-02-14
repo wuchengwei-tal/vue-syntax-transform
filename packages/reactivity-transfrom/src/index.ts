@@ -30,10 +30,8 @@ export { AssetURLOptions, AssetURLTagConfig } from './templateTransformAssetUrl'
 import { parse } from '@vue/compiler-sfc'
 export function reactivityTransform(src: string, id = 'xxxxxx') {
   const { descriptor } = parse(src)
-  const { content } = compileScript(descriptor, {
+  return compileScript(descriptor, {
     id,
     reactivityTransform: true
   })
-
-  return content
 }

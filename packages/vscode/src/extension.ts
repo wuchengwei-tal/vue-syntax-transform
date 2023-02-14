@@ -5,7 +5,9 @@ import { v2ToV3Setup } from '../../v2-v3setup'
 import { reactivityTransform } from '../../reactivity-transfrom'
 
 export function activate(context: ExtensionContext) {
-  const transform = (transformer: (s: string, id: string) => string) => {
+  const transform = (
+    transformer: (s: string, id: string) => { content: string }
+  ) => {
     return async () => {
       const editor = window.activeTextEditor
       if (!editor) return
@@ -15,8 +17,8 @@ export function activate(context: ExtensionContext) {
 
       const { fileName } = editor.document
 
-      const result = transformer(src, fileName)
-      const edit = minimalEdit(document, result)
+      const { content } = transformer(src, fileName)
+      const edit = minimalEdit(document, content)
       await editor.edit(editBuilder => {
         editBuilder.replace(edit.range, edit.newText)
       })

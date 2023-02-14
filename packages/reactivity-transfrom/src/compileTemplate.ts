@@ -21,7 +21,7 @@ import {
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
-import consolidate from '@vue/consolidate'
+// import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
 
 export interface TemplateCompiler {
@@ -120,7 +120,7 @@ export function compileTemplate(
       ? preprocessCustomRequire(preprocessLang)
       : false
       ? undefined
-      : consolidate[preprocessLang as keyof typeof consolidate]
+      : undefined // consolidate[preprocessLang as keyof typeof consolidate]
     : false
   if (preprocessor) {
     try {
