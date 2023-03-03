@@ -7,7 +7,7 @@ import {
   UNREF,
   SimpleExpressionNode,
   isFunctionType,
-  walkIdentifiers,
+  walkIdentifiers
   // NodeTypes,
   // BindingTypes
 } from '@vue/compiler-dom'
@@ -998,12 +998,13 @@ export function compileScript(
       node.type === 'ExportAllDeclaration' ||
       node.type === 'ExportDefaultDeclaration'
     ) {
-      // error(
-      //   `<script setup> cannot contain ES module exports. ` +
-      //     `If you are using a previous version of <script setup>, please ` +
-      //     `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
-      //   node
-      // )
+      __TEST__ &&
+        error(
+          `<script setup> cannot contain ES module exports. ` +
+            `If you are using a previous version of <script setup>, please ` +
+            `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
+          node
+        )
     }
 
     if (isTS) {

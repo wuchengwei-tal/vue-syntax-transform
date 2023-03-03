@@ -1,49 +1,29 @@
-import { component_transform } from './component_transform'
+import { parse } from '@vue/compiler-sfc'
+import { compileScript } from './src/compileScript'
 
-export function v2ToV3Setup(code?: string, id?: string) {
-  if (!code) return { content: '' }
-  const scriptRe = /<script.*>((?:.|\n)*)<\/script>/
-  const templateRe = /<template.*>((?:.|\n)*)<\/template>/
-  const styleRe = /<style.*>((?:.|\n)*)<\/style>/
+export * from './src/data'
 
-  let script
-  let match = code.match(scriptRe)
-  if (match) script = match[1]
-  else script = ''
-  script = transformSript(script)
+export function v2ToV3Setup(src: string, id: string) {
+  if (!/\.vue|\.js$/.test(id) || !src) return { content: '' }
 
-  let template
-  match = code.match(templateRe)
-  if (match) template = match[0]
-  else template = ''
-  template = transformTemplate(template)
+  let prefix = ''
+  let suffix = ''
 
-  let style
-  match = code.match(styleRe)
-  if (match) style = match[0]
-  else style = ''
-  // style = transformStyle(style);
+  if (!/\.vue/.test(id)) {
+    prefix = '<script>'
+    suffix = '</script>'
+    src = prefix + src + suffix
+  }
+  const { descriptor } = parse(src)
 
-  code = `
-${script}\n\n
-${template}\n\n
-${style}\n
-`
-  return { content: code }
+  const result = compileScript(descriptor, { id })
+  prefix && (result.content = result.content.replace(prefix, ''))
+  suffix && (result.content = result.content.replace(suffix, ''))
+  return result
 }
 
 function transformSript(script: string) {
-  const { code: replaced_code, emits, router } = replace_script(script)
-
-  //   fs.writeFileSync(includes[0].replace("vue", "js"), replaced_code);
-
-  // console.log(
-  //     chalk.blue(
-  //         `emits: ${emits} router: ${router.router} route: ${router.route}`
-  //     )
-  // );
-
-  const { output } = component_transform(replaced_code)
+  const output = {} as any
   const { props } = output
   //   type Prop =
   output.props = ''
@@ -63,10 +43,7 @@ function transformSript(script: string) {
   const code = `<script lang='ts' setup>
   ${output.imports || ''}
   ${inline ? '' : 'type Props = ' + output.props}
-  const emit = defineEmits(${emits});
   const props = ${propCode};\n
-  ${router.route ? 'const route = useRoute();' : ''}
-  ${router.router ? 'const router = useRouter();\n' : ''}
   ${output.states || ''}\n
   ${output.getters || ''}\n
   ${output.methods || ''}\n
@@ -77,32 +54,6 @@ function transformSript(script: string) {
 
   //   return "";
   return replaceActionBody(code)
-}
-
-function replace_script(script: string) {
-  let emits: any = new Set()
-  const router = { router: false, route: false }
-
-  let code = ''
-  for (let line of script.split('\n')) {
-    if (/this\.\$router.*/.test(line)) router.router = true
-    else if (/this\.\$route.*/.test(line)) router.route = true
-    const match = line.match(/this\.\$emit\(['|"](.*)['|"],?/)
-    if (match) {
-      // console.log(`match: ${match}`);
-      emits.add(match[1])
-    }
-
-    //  remove this
-    line = line.replace(/this\.\$/g, '')
-    code += line.replace(/this\./g, '') + '\n'
-  }
-  emits = JSON.stringify(Array.from(emits))
-  return { code, emits, router }
-}
-
-function transformTemplate(code: string) {
-  return code
 }
 
 function transformStyle(style: string) {
