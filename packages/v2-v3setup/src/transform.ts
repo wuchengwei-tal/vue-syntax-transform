@@ -264,6 +264,16 @@ export function transformBindings(
     output.push(transHook(key, value))
   }
 
+  for (const [key, { type, value }] of Object.entries(bindings)) {
+    if (type === BindingTypes.$) {
+      output.unshift(
+        variableDeclaration('const', [
+          variableDeclarator(identifier(key), value)
+        ])
+      )
+    }
+  }
+
   return output.length ? generate(program(output)).code || '' : ''
 }
 
