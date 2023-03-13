@@ -60,6 +60,9 @@ describe('SFC compile', () => {
       fullName: BindingTypes.COMPUTED
     })
 
+    expect(content).toMatch('const firstName = ref(')
+    expect(content).toMatch('const fullName = computed(() => {')
+
     assertCode(content)
   })
 
@@ -88,6 +91,10 @@ describe('SFC compile', () => {
         },
         fullName(v1, v2) {
           this.firstName = 'fullName'
+        },
+        'fullName.a' : {
+          handler(v1, v2){
+          },
         }
       }
     }
@@ -99,6 +106,68 @@ describe('SFC compile', () => {
       lastName: BindingTypes.DATA,
       fullName: BindingTypes.DATA
     })
+
+    expect(content).toMatch('watch(firstName, () => "firstName")')
+    expect(content).toMatch('watch(lastName, (v1, v2) => {')
+    expect(content).toMatch('watch(fullName, (v1, v2) => {')
+    expect(content).toMatch('watch(() => fullName.a, (v1, v2)')
+
+    assertCode(content)
+  })
+
+  test('$refs', () => {
+    const { content } = compile(`
+    <script>
+      export default {
+        mounted(){
+          this.$refs?.listRef.page
+        }
+      }
+    </script>
+    `)
+    expect(content).toMatch('const listRef = ref()')
+    expect(content).toMatch(' listRef.page')
+    expect(content).not.toMatch('mounted(')
+    expect(content).toMatch('onMounted(()')
+
+    assertCode(content)
+  })
+
+  test('router', () => {
+    const { content } = compile(`
+    <script>
+      export default {
+        created(){
+          this.$route.fullPath
+          this.$router.push('/list')
+        }
+      }
+    </script>
+    `)
+    expect(content).toMatch('const route = useRoute()')
+    expect(content).toMatch(' route.fullPath')
+    expect(content).toMatch('const router = useRouter()')
+    expect(content).toMatch(" router.push('/list');")
+    expect(content).not.toMatch('created(')
+
+    assertCode(content)
+  })
+
+  test('emit', () => {
+    const { content } = compile(`
+    <script>
+      export default {
+        created(){
+          this.$emit('click', 0)
+          this.$emit('change', 1)
+        },
+      }
+    </script>
+    `)
+
+    expect(content).toMatch(`const emit = defineEmits(["click", "change"])`)
+    expect(content).toMatch(` emit('click', 0)`)
+    expect(content).toMatch(` emit('change', 1)`)
 
     assertCode(content)
   })

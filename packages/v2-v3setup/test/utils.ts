@@ -33,5 +33,5 @@ export function assertCode(code: string) {
     console.log(code)
     throw e
   }
-//   expect(code).toMatchSnapshot()
+  expect(code).toMatchSnapshot()
 }

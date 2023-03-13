@@ -315,6 +315,10 @@ function walkWatches(
         const { key, value } = watcher
         if (key.type === 'Identifier')
           registerBinding(bindings, key, value, BindingTypes.WATCH)
+
+        if (key.type === 'StringLiteral') {
+          registerBinding(bindings, identifier(key.value), value, BindingTypes.WATCH)
+        }
       }
       if (watcher.type === 'ObjectMethod') {
         if (watcher.key.type === 'Identifier')

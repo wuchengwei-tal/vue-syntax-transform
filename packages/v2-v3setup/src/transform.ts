@@ -1,4 +1,5 @@
 import {
+  arrayExpression,
   ArrowFunctionExpression,
   arrowFunctionExpression,
   BlockStatement,
@@ -8,7 +9,6 @@ import {
   functionDeclaration,
   Identifier,
   isExpression,
-  isPrivateName,
   MemberExpression,
   memberExpression,
   Node,
@@ -17,9 +17,7 @@ import {
   ObjectMethod,
   ObjectProperty,
   OptionalMemberExpression,
-  PrivateName,
   program,
-  Statement,
   StringLiteral,
   stringLiteral
 } from '@babel/types'
@@ -167,24 +165,37 @@ export function transformBindings(
           ctx.inFuncBody = true
         }
 
-        if (
-          child.type === 'MemberExpression' ||
-          child.type === 'OptionalMemberExpression'
-        ) {
-          // if (ctx.membersCount === -1) this.skip()
+        if (isMember(child)) {
           ctx.members?.push(child)
           ctx.membersCount += 1
           const node = transBinding(child, ctx)
           node && this.replace(node)
           if (!ctx.membersCount) this.remove()
         }
+
+        if (child.type === 'CallExpression' && isMember(child.callee)) {
+          const { property } = child.callee
+          if (property.type === 'Identifier') {
+            const evt = child.arguments[0]
+            if (property.name === '$emit' && evt.type === 'StringLiteral') {
+              const evts: string[] = bindings['emit']?.value || []
+              if (!evts.includes(evt.value)) {
+                evts.push(evt.value)
+
+                registerBinding(
+                  bindings,
+                  identifier('emit'),
+                  evts,
+                  BindingTypes.$
+                )
+              }
+            }
+          }
+        }
       },
       leave(node: Node) {
         if (node.type === 'FunctionDeclaration') ctx.inFuncBody = false
-        if (
-          node.type === 'MemberExpression' ||
-          node.type === 'OptionalMemberExpression'
-        ) {
+        if (isMember(node)) {
           ctx.membersCount = Math.max(ctx.membersCount - 1, 0)
           ctx.members.pop()
           if (!ctx.members.length && ctx.transformedMember)
@@ -230,7 +241,7 @@ export function transformBindings(
       return id
     }
     if (name === 'emit') {
-      registerBinding(bindings, id, [], BindingTypes.$)
+      // registerBinding(bindings, id, [], BindingTypes.$)
       return id
     }
     if (name === 'refs') {
@@ -264,8 +275,14 @@ export function transformBindings(
     output.push(transHook(key, value))
   }
 
-  for (const [key, { type, value }] of Object.entries(bindings)) {
+  for (let [key, { type, value }] of Object.entries(bindings)) {
     if (type === BindingTypes.$) {
+      if (key === 'emit') {
+        value = callExpression(identifier('defineEmits'), [
+          arrayExpression(value.map((v: string) => stringLiteral(v)))
+        ])
+      }
+
       output.unshift(
         variableDeclaration('const', [
           variableDeclarator(identifier(key), value)
@@ -288,11 +305,12 @@ export function registerBinding<T = any>(
   type: BindingTypes
 ) {
   if (node.name in bindings) {
-    const name = (isOutVar(type) ? 'const_' : '') + node.name
+    const name = node.name
+    // const name = (isOutVar(type) ? 'const_' : '') + node.name
 
-    if (!isOutVar(type) && isOutVar(bindings[node.name].type)) {
-      bindings['const_' + node.name] = bindings[node.name]
-    }
+    // if (!isOutVar(type) && isOutVar(bindings[node.name].type)) {
+    //   bindings['const_' + node.name] = bindings[node.name]
+    // }
     bindings[name].type = type
     if (value) bindings[name].value = value
   } else bindings[node.name] = { type, value }
@@ -305,10 +323,7 @@ export function restoreMember(
   const { object, property, computed, optional } = root
 
   if (n === 2) {
-    if (
-      object.type === 'MemberExpression' ||
-      object.type === 'OptionalMemberExpression'
-    )
+    if (isMember(object))
       if (object.property.type === 'Identifier')
         return memberExpression(object.property, property, computed, optional)
     if (isExpression(object)) {
@@ -316,11 +331,16 @@ export function restoreMember(
     }
   }
 
-  if (
-    object.type === 'MemberExpression' ||
-    object.type === 'OptionalMemberExpression'
-  ) {
+  if (isMember(object)) {
     const obj = restoreMember(object, n - 1)
     if (obj) return memberExpression(obj, property, computed, optional)
   }
+}
+
+function isMember(
+  node: Node
+): node is MemberExpression | OptionalMemberExpression {
+  return (
+    node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
+  )
 }

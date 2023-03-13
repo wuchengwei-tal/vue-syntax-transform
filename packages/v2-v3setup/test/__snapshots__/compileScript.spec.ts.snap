@@ -1,0 +1,63 @@
+// Vitest Snapshot v1
+
+exports[`SFC compile > $refs 1`] = `
+"const listRef = ref();
+onMounted(() => {
+  listRef.page;
+});"
+`;
+
+exports[`SFC compile > computed 1`] = `
+"const firstName = ref('Foo');
+const lastName = ref('Bar');
+const fullName = computed(() => {
+  return firstName.value + ' ' + lastName.value;
+});"
+`;
+
+exports[`SFC compile > data 1`] = `
+"const firstName = ref('Foo');
+const lastName = ref('Bar');
+const n = ref(1);
+const bool = ref(true);
+const obj = ref({});
+const timeInterval = ref(null);
+const list = ref([]);"
+`;
+
+exports[`SFC compile > emit 1`] = `
+"const emit = defineEmits([\\"click\\", \\"change\\"]);
+{
+  emit('click', 0);
+  emit('change', 1);
+}"
+`;
+
+exports[`SFC compile > router 1`] = `
+"const router = useRouter();
+const route = useRoute();
+{
+  route.fullPath;
+  router.push('/list');
+}"
+`;
+
+exports[`SFC compile > watch 1`] = `
+"const firstName = ref('Foo');
+const lastName = ref('Bar');
+const fullName = ref({
+  a: 1
+});
+watch(firstName, () => \\"firstName\\");
+watch(lastName, (v1, v2) => {
+  if (v1 !== v2) {
+    firstName.value = 'firstName';
+  }
+}, {
+  deep: true
+});
+watch(fullName, (v1, v2) => {
+  firstName.value = 'fullName';
+});
+watch(() => fullName.a, (v1, v2) => {});"
+`;
