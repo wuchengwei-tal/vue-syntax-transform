@@ -253,7 +253,9 @@ export function transformBindings(
             return memberExpression(property, identifier('value'))
           if (type === BindingTypes.METHOD || type === BindingTypes.FILTER)
             return property
-          if (type === BindingTypes.PROPS) return property
+          if (type === BindingTypes.PROPS) {
+            return memberExpression(identifier('props'), property)
+          }
         }
 
         if (name.startsWith('$')) return trans$(property, ctx)
@@ -319,6 +321,9 @@ export function transformBindings(
         value = callExpression(identifier('defineEmits'), [
           arrayExpression(value.map((v: string) => stringLiteral(v)))
         ])
+      }
+      if (key === 'props') {
+        value = callExpression(identifier('defineProps'), [value])
       }
 
       output.unshift(
@@ -389,7 +394,7 @@ function isMember(
 
 function isEmptyStmt(stmt: Statement) {
   if (stmt.type === 'EmptyStatement') return true
-  if (stmt.type === 'ExpressionStatement') return !!stmt.expression
+  if (stmt.type === 'ExpressionStatement') return !stmt.expression
 
   return false
 }

@@ -138,6 +138,8 @@ export function compileScript(
         }
       }
 
+      if (name === 'props') walkProps(optionsBindings, property)
+
       if (name === 'filters')
         walkMethods(optionsBindings, property, BindingTypes.FILTER)
 
@@ -304,6 +306,22 @@ function walkMethods(
   }
 }
 
+function walkProps(bindings: BindingMap<any>, property: ObjectProperty) {
+  const { value } = property
+  if (value.type === 'ObjectExpression') {
+    if (value.properties.length) {
+      const props = property.key as Identifier
+      registerBinding(bindings, props, value, BindingTypes.$)
+    }
+    for (const p of value.properties) {
+      if (p.type === 'ObjectProperty') {
+        if (p.key.type === 'Identifier')
+          registerBinding(bindings, p.key, null, BindingTypes.PROPS)
+      }
+    }
+  }
+}
+
 function walkWatches(
   bindings: BindingMap<ObjectProperty['value'] | ObjectMethod>,
   property: ObjectProperty
@@ -317,7 +335,12 @@ function walkWatches(
           registerBinding(bindings, key, value, BindingTypes.WATCH)
 
         if (key.type === 'StringLiteral') {
-          registerBinding(bindings, identifier(key.value), value, BindingTypes.WATCH)
+          registerBinding(
+            bindings,
+            identifier(key.value),
+            value,
+            BindingTypes.WATCH
+          )
         }
       }
       if (watcher.type === 'ObjectMethod') {

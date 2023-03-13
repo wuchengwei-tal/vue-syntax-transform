@@ -33,6 +33,19 @@ exports[`SFC compile > emit 1`] = `
 }"
 `;
 
+exports[`SFC compile > props 1`] = `
+"const props = defineProps({
+  prop: {
+    type: Object,
+    default: () => {}
+  },
+  bool: Boolean
+});
+onMounted(() => {
+  props.prop;
+});"
+`;
+
 exports[`SFC compile > router 1`] = `
 "const router = useRouter();
 const route = useRoute();
@@ -46,8 +59,6 @@ exports[`SFC compile > vuex 1`] = `
 "{
   setLoadingState(false);
   getServerTime();
-  ;
-  ;
   const a = a;
   const b = b;
 }"

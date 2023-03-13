@@ -198,4 +198,29 @@ describe('SFC compile', () => {
 
     assertCode(content)
   })
+
+  test('props', () => {
+    const { content } = compile(`
+    <script>
+      export default {
+        props: {
+          prop: {
+            type: Object,
+            default: () => {},
+          },
+          bool: Boolean,
+        },
+        mounted(){
+          this.prop
+        },
+        
+      }
+    </script>
+    `)
+
+    expect(content).not.toMatch(`this.`)
+    expect(content).toMatch(`props.prop`)
+
+    assertCode(content)
+  })
 })
