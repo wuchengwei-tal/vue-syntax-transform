@@ -135,7 +135,7 @@ describe('transform ', () => {
       return res
     }
 
-    expect(gen(restoreMember(member, 1))).toEqual(undefined)
+    expect(gen(restoreMember(member, 1))).toEqual('page;')
     expect(gen(restoreMember(member, 2))).toMatch('listRef.page')
     expect(gen(restoreMember(member, 3))).toMatch('$refs.listRef.page')
     expect(gen(restoreMember(member, 4))).toMatch('this.$refs.listRef.page')

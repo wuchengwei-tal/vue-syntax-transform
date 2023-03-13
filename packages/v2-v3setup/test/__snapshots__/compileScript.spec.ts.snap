@@ -42,6 +42,17 @@ const route = useRoute();
 }"
 `;
 
+exports[`SFC compile > vuex 1`] = `
+"{
+  setLoadingState(false);
+  getServerTime();
+  ;
+  ;
+  const a = a;
+  const b = b;
+}"
+`;
+
 exports[`SFC compile > watch 1`] = `
 "const firstName = ref('Foo');
 const lastName = ref('Bar');

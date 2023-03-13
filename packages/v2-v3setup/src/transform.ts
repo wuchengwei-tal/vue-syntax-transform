@@ -151,7 +151,7 @@ export function transformBindings(
     inFuncBody: boolean
     membersCount: number
     members: (MemberExpression | OptionalMemberExpression)[]
-    transformedMember?: MemberExpression | OptionalMemberExpression
+    transformedMember?: MemberExpression | OptionalMemberExpression | Identifier
   }
   function transBody(value: BlockStatement | Expression) {
     const ctx: Ctx = {
@@ -174,20 +174,40 @@ export function transformBindings(
         }
 
         if (child.type === 'CallExpression' && isMember(child.callee)) {
-          const { property } = child.callee
+          const { property, object } = child.callee
           if (property.type === 'Identifier') {
             const evt = child.arguments[0]
-            if (property.name === '$emit' && evt.type === 'StringLiteral') {
-              const evts: string[] = bindings['emit']?.value || []
-              if (!evts.includes(evt.value)) {
-                evts.push(evt.value)
+            if (evt?.type === 'StringLiteral') {
+              if (property.name === '$emit') {
+                const evts: string[] = bindings['emit']?.value || []
+                if (!evts.includes(evt.value)) {
+                  evts.push(evt.value)
 
-                registerBinding(
-                  bindings,
-                  identifier('emit'),
-                  evts,
-                  BindingTypes.$
-                )
+                  registerBinding(
+                    bindings,
+                    identifier('emit'),
+                    evts,
+                    BindingTypes.$
+                  )
+                }
+              }
+
+              if (
+                isMember(object) &&
+                object.property.type === 'Identifier' &&
+                object.property.name === '$store'
+              ) {
+                const { name } = property
+                if (name === 'dispatch' || name === 'commit') {
+                  const node = callExpression(
+                    identifier(evt.value),
+                    child.arguments.slice(1)
+                  )
+                  this.replace(node)
+                }
+                if (name === 'registerModule' || name === 'unregisterModule') {
+                  this.remove()
+                }
               }
             }
           }
@@ -255,6 +275,11 @@ export function transformBindings(
         ctx.transformedMember = restoreMember(members[0], idx)
       }
     }
+    if (name === 'store') {
+      const { members, membersCount } = ctx
+      const idx = membersCount - 1
+      ctx.transformedMember = restoreMember(members[0], idx - 1)
+    }
   }
 
   for (const [key, { type, value }] of Object.entries(bindings)) {
@@ -319,8 +344,12 @@ export function registerBinding<T = any>(
 export function restoreMember(
   root: MemberExpression | OptionalMemberExpression,
   n: number
-): MemberExpression | OptionalMemberExpression | undefined {
+): MemberExpression | OptionalMemberExpression | Identifier | undefined {
   const { object, property, computed, optional } = root
+
+  if (n === 1) {
+    if (property.type === 'Identifier') return property
+  }
 
   if (n === 2) {
     if (isMember(object))

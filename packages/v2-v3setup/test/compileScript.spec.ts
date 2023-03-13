@@ -171,4 +171,31 @@ describe('SFC compile', () => {
 
     assertCode(content)
   })
+
+  test('vuex', () => {
+    const { content } = compile(`
+    <script>
+      export default {
+        created(){
+          this.$store.commit('setLoadingState', false);
+          this.$store.dispatch('getServerTime');
+          this.$store.registerModule('module');
+          this.$store.unregisterModule('module');
+          const a = this.$store.state.a;
+          const b = this.$store.getter.b;
+        },
+      }
+    </script>
+    `)
+
+    expect(content).not.toMatch(`this.$store`)
+    expect(content).not.toMatch(`registerModule`)
+    expect(content).not.toMatch(`unregisterModule`)
+    expect(content).toMatch(` setLoadingState(false)`)
+    expect(content).toMatch(` getServerTime()`)
+    expect(content).toMatch(`const a = a`)
+    expect(content).toMatch(`const b = b`)
+
+    assertCode(content)
+  })
 })
