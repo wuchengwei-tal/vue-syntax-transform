@@ -45,7 +45,6 @@ import {
   Expression,
   VariableDeclaration
 } from '@babel/types'
-import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 // import {
 //   CSS_VARS_HELPER,

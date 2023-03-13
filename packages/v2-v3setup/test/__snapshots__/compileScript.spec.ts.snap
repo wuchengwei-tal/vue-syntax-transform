@@ -16,7 +16,9 @@ const fullName = computed(() => {
 `;
 
 exports[`SFC compile > data 1`] = `
-"const firstName = ref('Foo');
+"import png from './a.png'
+      
+      const firstName = ref('Foo');
 const lastName = ref('Bar');
 const n = ref(1);
 const bool = ref(true);

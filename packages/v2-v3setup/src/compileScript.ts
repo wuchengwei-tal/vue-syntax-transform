@@ -58,6 +58,7 @@ export function compileScript(
 
   let sfc_name = ''
   const mixins = []
+  const assets: string[] = []
   const components: { alias?: string; name: string }[] = []
   let defaultExport: Node | undefined
   const s = new MagicString(source)
@@ -96,7 +97,7 @@ export function compileScript(
     if (key.type === 'Identifier') name = key.name
     if (key.type === 'StringLiteral') name = key.value
     if (property.type === 'ObjectMethod') {
-      if (name === 'data') walkState(optionsBindings, property.body)
+      if (name === 'data') walkState(optionsBindings, property.body, assets)
       else {
         registerBinding(
           hookBindings,
@@ -162,7 +163,13 @@ export function compileScript(
 
   for (const node of scriptAst.body) {
     if (node.type === 'ImportDeclaration') {
-      for (const _specifier of node.specifiers) ''
+      const { source, specifiers } = node
+      for (const specifier of specifiers) {
+        if (specifier.type === 'ImportDefaultSpecifier') {
+          if (!/\.(vue|js)/.test(source.value) && source.value.includes('.'))
+            assets.push(specifier.local.name)
+        }
+      }
     }
 
     if (node.type === 'ExportNamedDeclaration') {
@@ -226,7 +233,8 @@ export function compileScript(
 
 function walkState(
   bindings: BindingMap<ObjectProperty['value']>,
-  block: BlockStatement
+  block: BlockStatement,
+  assets: string[]
 ) {
   for (const node of block.body) {
     if (node.type === 'ReturnStatement') {
@@ -235,7 +243,7 @@ function walkState(
         for (const state of argument.properties) {
           if (state.type === 'ObjectProperty') {
             const { key, value } = state
-            if (key.type === 'Identifier')
+            if (key.type === 'Identifier' && !assets.includes(key.name))
               registerBinding(bindings, key, value, BindingTypes.DATA)
           }
         }

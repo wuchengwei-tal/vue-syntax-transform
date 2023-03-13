@@ -7,6 +7,7 @@ describe('SFC compile', () => {
   test('data', () => {
     const { content, bindings } = compile(`
       <script>
+      import png from './a.png'
       export default {
         data() {
           return {
@@ -17,6 +18,7 @@ describe('SFC compile', () => {
             obj: {}, 
             timeInterval: null,
             list: [],
+            png,
           };
         }
       }
@@ -32,6 +34,8 @@ describe('SFC compile', () => {
       timeInterval: BindingTypes.DATA,
       list: BindingTypes.DATA
     })
+
+    expect(content).not.toMatch(`const png = ref`)
     assertCode(content)
   })
 
