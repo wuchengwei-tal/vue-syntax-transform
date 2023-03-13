@@ -2,6 +2,7 @@ import {
   arrayExpression,
   ArrowFunctionExpression,
   arrowFunctionExpression,
+  blockStatement,
   BlockStatement,
   emptyStatement,
   Expression,
@@ -18,6 +19,7 @@ import {
   ObjectProperty,
   OptionalMemberExpression,
   program,
+  Statement,
   StringLiteral,
   stringLiteral
 } from '@babel/types'
@@ -135,16 +137,20 @@ export function transformBindings(
       const id = LifecircleHookMap[name as keyof typeof LifecircleHookMap]
       if (id) {
         const body = transBody(value.body)
+        if (!body.body.length) return
+
         return expressionStatement(
           callExpression(identifier(id), [
             arrowFunctionExpression(value.params, body, value.async)
           ])
         )
       }
-      return transBody(value.body)
-    }
 
-    return emptyStatement()
+      const body = transBody(value.body)
+      if (body.body.length) {
+        return body
+      }
+    }
   }
 
   type Ctx = {
@@ -153,13 +159,13 @@ export function transformBindings(
     members: (MemberExpression | OptionalMemberExpression)[]
     transformedMember?: MemberExpression | OptionalMemberExpression | Identifier
   }
-  function transBody(value: BlockStatement | Expression) {
+  function transBody(value: BlockStatement | Expression): BlockStatement {
     const ctx: Ctx = {
       inFuncBody: false,
       membersCount: 0,
       members: []
     }
-    const block = (walk as any)(value, {
+    const block: typeof value = (walk as any)(value, {
       enter(child: Node, parent: Node) {
         if (child.type === 'FunctionDeclaration') {
           ctx.inFuncBody = true
@@ -224,7 +230,13 @@ export function transformBindings(
       }
     })
 
-    return block
+    if (block.type === 'BlockStatement') {
+      block.body = block.body.filter(v => !isEmptyStmt(v))
+      return block
+    } else {
+      const stmt = expressionStatement(block)
+      return blockStatement(isEmptyStmt(stmt) ? [] : [stmt])
+    }
   }
 
   function transBinding(
@@ -297,7 +309,8 @@ export function transformBindings(
   }
 
   for (const [key, { value }] of Object.entries(hookBindings)) {
-    output.push(transHook(key, value))
+    const result = transHook(key, value)
+    result && output.push(result)
   }
 
   for (let [key, { type, value }] of Object.entries(bindings)) {
@@ -372,4 +385,11 @@ function isMember(
   return (
     node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
   )
+}
+
+function isEmptyStmt(stmt: Statement) {
+  if (stmt.type === 'EmptyStatement') return true
+  if (stmt.type === 'ExpressionStatement') return !!stmt.expression
+
+  return false
 }
