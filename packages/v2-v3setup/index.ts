@@ -22,40 +22,6 @@ export function v2ToV3Setup(src: string, id: string) {
   return result
 }
 
-function transformSript(script: string) {
-  const output = {} as any
-  const { props } = output
-  //   type Prop =
-  output.props = ''
-  for (const prop of props) {
-    output.props += `${prop[0]}: ${prop[1] !== 'array' ? prop[1] : 'any[]'}; `
-  }
-  output.props = `{${output.props}}`
-  const inline = props.length < 3
-  let propCode = `defineProps<${inline ? output.props : 'Props'}>()`
-  const defaultValue = props.reduce(
-    (obj: any, prop: string) =>
-      prop[2] && Object.assign(obj, { [prop[0]]: prop[2] }),
-    {}
-  )
-  const defaults = inline && Object.keys(defaultValue || {})?.length
-  defaults && (propCode = `withDefaults(${propCode}, ${defaultValue})`)
-  const code = `<script lang='ts' setup>
-  ${output.imports || ''}
-  ${inline ? '' : 'type Props = ' + output.props}
-  const props = ${propCode};\n
-  ${output.states || ''}\n
-  ${output.getters || ''}\n
-  ${output.methods || ''}\n
-  ${output.watchers || ''}\n
-  ${output.hooks}\n
-  </script>\n
-    `
-
-  //   return "";
-  return replaceActionBody(code)
-}
-
 function transformStyle(style: string) {
   let code = ''
   for (let line of style.split('\n')) {

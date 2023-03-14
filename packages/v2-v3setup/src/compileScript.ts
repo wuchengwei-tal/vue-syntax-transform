@@ -1,4 +1,5 @@
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
+
 import {
   Node,
   ObjectExpression,
@@ -22,14 +23,16 @@ import {
 import MagicString from 'magic-string'
 
 import { generateCodeFrame } from '@vue/shared'
+
 import { BindingTypes, BindingMap } from './data'
 import { transformBindings, registerBinding } from './transform'
+import { cssTransform } from './css-transform'
 
 export function compileScript(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions
 ): SFCScriptBlock | any {
-  let { script, source } = sfc
+  let { script, source, styles, template } = sfc
   if (!script) return { content: source }
 
   const plugins: ParserPlugin[] = []
@@ -211,6 +214,13 @@ export function compileScript(
       startOffset + defaultExport!.start!,
       startOffset + defaultExport!.end!
     )
+  }
+
+  // css
+  for (const style of styles) {
+    const css = cssTransform(style.content)
+    s.prependRight(style.loc.end.offset, css)
+    s.remove(style.loc.start.offset, style.loc.end.offset)
   }
 
   s.trim()
