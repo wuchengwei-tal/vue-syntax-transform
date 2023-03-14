@@ -3,6 +3,9 @@
 Vue Transform
 
 
+vsce package
+code --install-extension *.vsix
+
 ## Requirements
 
 

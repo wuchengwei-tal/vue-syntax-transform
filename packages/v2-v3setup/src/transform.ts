@@ -4,7 +4,6 @@ import {
   arrowFunctionExpression,
   blockStatement,
   BlockStatement,
-  emptyStatement,
   Expression,
   expressionStatement,
   functionDeclaration,
@@ -274,13 +273,22 @@ export function transformBindings(
       registerBinding(bindings, id, value, BindingTypes.$)
       return id
     }
-    if (name === 'emit') {
-      // registerBinding(bindings, id, [], BindingTypes.$)
+    if (name === 'emit' || name === 'nextTick') return id
+
+    if (name === 'scopedSlots' || name === 'slots') {
+      id = identifier('slots')
+      registerBinding(
+        bindings,
+        id,
+        callExpression(identifier('useSlots'), []),
+        BindingTypes.$
+      )
       return id
     }
+
+    const { members, membersCount } = ctx
+    const idx = membersCount - 1
     if (name === 'refs') {
-      const { members, membersCount } = ctx
-      const idx = membersCount - 1
       const member = members[idx - 1]
       const { property: p } = member
       if (p.type === 'Identifier') {
@@ -290,8 +298,6 @@ export function transformBindings(
       }
     }
     if (name === 'store') {
-      const { members, membersCount } = ctx
-      const idx = membersCount - 1
       ctx.transformedMember = restoreMember(members[0], idx - 1)
     }
   }
