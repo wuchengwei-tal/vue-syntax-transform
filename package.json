@@ -11,6 +11,9 @@
     "@vue/compiler-dom": "^3.2.47",
     "@vue/compiler-sfc": "^3.2.47",
     "@vue/shared": "^3.2.47",
+    "source-map": "^0.6.1",
+    "estree-walker": "^2.0.2",
+    "magic-string": "^0.25.7",
     "tsup": "^6.6.2"
   },
   "devDependencies": {

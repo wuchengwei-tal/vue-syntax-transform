@@ -7,7 +7,6 @@ import {
 } from '@babel/types'
 import { expect } from 'vitest'
 
-import { BindingTypes } from '../src/data'
 import { restoreMember } from '../src/transform'
 
 const generate = require('@babel/generator').default

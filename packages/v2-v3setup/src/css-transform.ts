@@ -1,71 +1,64 @@
-import type { CssNode, Dimension, ListItem } from 'css-tree'
-import { parse, walk, generate, List } from 'css-tree'
-import { MagicString } from ''
+import type { CssNode, Dimension, Raw, Selector } from 'css-tree'
+import { parse, walk } from 'css-tree'
+import MagicString from 'magic-string'
+
+const Ratio = 100
 
 export function cssTransform(css: string) {
-  return generate(_cssTransform(css))
+  return _cssTransform(transComment(css))
 }
 
-export function _cssTransform(css: string) {
-  const ast = parse(css)
+export function _cssTransform(css: string, raw = '') {
+  const s = new MagicString(css)
+  const ast = parse(css, { positions: true })
 
-  let inBlock = false
+  function transDimension(node: Dimension) {
+    if (node.unit === 'rem') {
+      let { start, end } = node.loc!
+      const val = parseFloat(node.value) * Ratio + 'px'
+      s.overwrite(start.offset, end.offset, val)
+    }
+  }
+
+  function transSelector(node: Selector) {
+    const head = node.children.first
+    if (head?.type === 'Combinator' && /\/\s*deep\s*\//.test(head?.name)) {
+      const { start, end } = head.loc!
+      s.overwrite(start.offset, end.offset, ':deep(')
+      s.appendRight(node.loc!.end.offset, ')')
+    }
+  }
+
+  function transRaw(node: Raw) {
+    if (node.value !== raw) {
+      const { start, end } = node.loc!
+      const css = _cssTransform(node.value, node.value)
+      s.overwrite(start.offset, end.offset, css)
+    }
+  }
+
   walk(ast, {
-    enter(node: CssNode) {
+    leave(node: CssNode) {
       if (node.type === 'Dimension') transDimension(node)
 
-      if (node.type === 'Selector') {
-        const psudo = transDeep(node.children)
-        if (psudo) node.children = psudo
-      }
+      if (node.type === 'Selector') transSelector(node)
 
-      if (node.type === 'Block') {
-        inBlock = true
-        const { children } = node
-
-        children.forEach((data, o) => {
-          if (data.type === 'Raw') {
-            const css = data.value.replace(/\/\/.*\n/, '')
-            const n = children.createItem(_cssTransform(css))
-            children.replace(o, n)
-          }
-        })
-      }
-    },
-    leave(node: CssNode) {
-      if (node.type === 'Block') {
-        inBlock = false
-      }
+      if (node.type === 'Raw') transRaw(node)
     }
   })
 
-  return ast
+  return s.toString()
 }
 
-const Ratio = 100
-function transDimension(node: Dimension) {
-  if (node.unit === 'rem') {
-    node.value = String(parseFloat(node.value) * Ratio)
-    node.unit = 'px'
-  }
-}
-
-function transDeep(ctx: List<CssNode>) {
-  const data = ctx.first
-  if (!data) return
-  if (data.type === 'Combinator' && /\/\s*deep\s*\//.test(data.name)) {
-    const value = ctx.reduce<string>((v, d) => {
-      if ('name' in d && d.name !== data.name) {
-        return v + d!.name
-      } else return ''
-    }, '')
-    const children = new List<CssNode>().fromArray([{ type: 'Raw', value }])
-    const node: CssNode = {
-      type: 'PseudoClassSelector',
-      name: 'deep',
-      children
+export function transComment(css: string) {
+  let code = ''
+  for (let line of css.split('\n')) {
+    if (/\s*\/\/.*/.test(line)) {
+      line = line.replace('//', '/*')
+      line += ' */'
     }
 
-    return new List<CssNode>().fromArray([node])
+    code += line + '\n'
   }
+  return code
 }

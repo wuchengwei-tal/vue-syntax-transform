@@ -7,11 +7,7 @@
         "compile": "tsup",
         "watch": "tsup --watch src"
     },
-    "dependencies": {
-        "source-map": "^0.6.1",
-        "estree-walker": "^2.0.2",
-        "magic-string": "^0.25.7"
-    },
+    "dependencies": {},
     "devDependencies": {
         "@vue/consolidate": "^0.17.3",
         "@types/estree": "^0.0.48",

@@ -22,28 +22,6 @@ export function v2ToV3Setup(src: string, id: string) {
   return result
 }
 
-function transformStyle(style: string) {
-  let code = ''
-  for (let line of style.split('\n')) {
-    // 1.23rem to 123px
-    const matches = Array.from(line.matchAll(/(-?\d+\.?\d+)rem/g))
-    let newLine = ''
-    let i = 0
-    for (const match of matches) {
-      const len = match[0].length
-      const val = Math.round(+match[1] * 100).toFixed(0)
-      const { index } = match
-      newLine += line.slice(i, index) + val + 'px'
-      i = index! + len
-    }
-    newLine += line.slice(i, line.length)
-    // if (matches.length) console.log(newLine);
-    code += newLine + '\n'
-  }
-
-  return code
-}
-
 function transformActions(code: string) {
   const fnRe = /(export )?const \w+ = (async )?\(.*[\)|\n]/g
 
