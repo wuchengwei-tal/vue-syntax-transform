@@ -58,8 +58,8 @@ export function transformBindings(
     value: BlockStatement | string | Expression
   ) {
     let body
-    if (typeof value === 'string') {
-      body = arrowFunctionExpression([], stringLiteral(value))
+    if (typeof value == 'string') {
+      body = stringLiteral(value)
     } else body = transBody(value)
 
     return variableDeclaration('const', [

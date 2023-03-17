@@ -11,4 +11,5 @@ export default defineConfig({
     'cjs',
   ],
   shims: false,
+  minify: true,
 })
