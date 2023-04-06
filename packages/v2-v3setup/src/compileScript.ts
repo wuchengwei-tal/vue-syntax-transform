@@ -209,10 +209,15 @@ export function compileScript(
   const code = transformBindings(optionsBindings, watcherBingings, hookBindings)
 
   if (defaultExport) {
+    let i = startOffset
+    while (source[i--] == '>');
+    while (source[--i] != '<');
+    if (source.slice(i, i + 7) == '<script') s.prependRight(i + 7, ' setup')
+
     s.prependRight(endOffset, code + '\n')
     s.remove(
-      startOffset + defaultExport!.start!,
-      startOffset + defaultExport!.end!
+      startOffset + defaultExport.start!,
+      startOffset + defaultExport.end!
     )
   }
 
