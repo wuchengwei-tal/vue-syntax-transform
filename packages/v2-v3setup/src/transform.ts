@@ -33,7 +33,7 @@ import {
 import { walk } from 'estree-walker'
 import { capitalize } from '@vue/shared'
 
-import { BindingTypes, BindingMap, LifecircleHookMap } from './data'
+import { BindingTypes, BindingMap, LifeCircleHookMap } from './data'
 
 const generate = require('@babel/generator').default
 
@@ -58,7 +58,7 @@ export function transformBindings(
     value: BlockStatement | string | Expression
   ) {
     let body
-    if (typeof value == 'string') {
+    if (typeof value === 'string') {
       body = stringLiteral(value)
     } else body = transBody(value)
 
@@ -132,8 +132,8 @@ export function transformBindings(
   }
 
   function transHook(name: string, value: ObjectMethod) {
-    if (name in LifecircleHookMap) {
-      const id = LifecircleHookMap[name as keyof typeof LifecircleHookMap]
+    if (name in LifeCircleHookMap) {
+      const id = LifeCircleHookMap[name as keyof typeof LifeCircleHookMap]
       if (id) {
         const body = transBody(value.body)
         if (!body.body.length) return

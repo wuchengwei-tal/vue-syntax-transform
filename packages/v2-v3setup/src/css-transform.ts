@@ -2,7 +2,7 @@ import type { CssNode, Dimension, Raw, Selector } from 'css-tree'
 import MagicString from 'magic-string'
 const csstree = require('css-tree')
 
-const Ratio = 100
+const RATIO = 100
 
 export function cssTransform(css: string) {
   return _cssTransform(transComment(css))
@@ -13,9 +13,9 @@ export function _cssTransform(css: string, raw = '') {
   const ast = csstree.parse(css, { positions: true })
 
   function transDimension(node: Dimension) {
-    if (node.unit === 'rem') {
+    if (node.unit === 'px') {
       let { start, end } = node.loc!
-      const val = parseFloat(node.value) * Ratio + 'px'
+      const val = parseFloat(node.value) / RATIO + 'rem'
       s.overwrite(start.offset, end.offset, val)
     }
   }

@@ -7,6 +7,7 @@
     "@babel/generator": "^7.20.13",
     "@babel/traverse": "^7.20.13",
     "@babel/types": "^7.20.7",
+    "vue-template-compiler": "^2.7.14",
     "css-tree": "^2.3.1"
   },
   "devDependencies": {

@@ -31,7 +31,7 @@ export enum BindingTypes {
 
 export type BindingMap<T> = Record<string, { type: BindingTypes; value: T }>
 
-export const LifecircleHookMap = {
+export const LifeCircleHookMap = {
   beforeMount: 'onBeforeMount',
   mounted: 'onMounted',
   beforeUpdate: 'onBeforeUpdate',
@@ -52,7 +52,7 @@ export const WalkOrder = [
   'computed',
   'filter',
   'watch',
-  ...Object.keys(LifecircleHookMap)
+  ...Object.keys(LifeCircleHookMap)
 ]
 
 export const OutputOrder = [

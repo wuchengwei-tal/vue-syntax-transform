@@ -55,11 +55,11 @@ export function compileScript(
   // metadata that needs to be returned
   const bindingMetadata: Record<string, BindingTypes> = {}
   const optionsBindings: BindingMap<any> = Object.create(null)
-  const watcherBingings: BindingMap<ObjectProperty['value'] | ObjectMethod> =
+  const watcherBindings: BindingMap<ObjectProperty['value'] | ObjectMethod> =
     Object.create(null)
   const hookBindings: BindingMap<ObjectMethod> = Object.create(null)
 
-  let sfc_name = ''
+  let name = ''
   const mixins = []
   const assets: string[] = []
   const components: { alias?: string; name: string }[] = []
@@ -88,7 +88,7 @@ export function compileScript(
       if (property.type !== 'SpreadElement') {
         walkOption(property)
       } else {
-        if (property.argument.type == 'ObjectExpression')
+        if (property.argument.type === 'ObjectExpression')
           walkOptions(property.argument)
       }
     }
@@ -113,7 +113,7 @@ export function compileScript(
 
     if (property.type === 'ObjectProperty') {
       if (name === 'name' && property.value.type === 'StringLiteral')
-        sfc_name = property.value.value
+        name = property.value.value
 
       if (name === 'components') {
         const { value } = property
@@ -152,7 +152,7 @@ export function compileScript(
       if (name === 'methods')
         walkMethods(optionsBindings, property, BindingTypes.METHOD)
 
-      if (name === 'watch') walkWatches(watcherBingings, property)
+      if (name === 'watch') walkWatches(watcherBindings, property)
     }
   }
 
@@ -206,13 +206,17 @@ export function compileScript(
   }
 
   // transform
-  const code = transformBindings(optionsBindings, watcherBingings, hookBindings)
+  const code = transformBindings(optionsBindings, watcherBindings, hookBindings)
 
   if (defaultExport) {
-    let i = startOffset
-    while (source[i--] == '>');
-    while (source[--i] != '<');
-    if (source.slice(i, i + 7) == '<script') s.prependRight(i + 7, ' setup')
+    if (!__TEST__) {
+      let i = startOffset
+      while (source[i--] === '>');
+      while (source[--i] !== '<');
+      if (source.slice(i, i + 7) === '<script') {
+        s.prependRight(i + 7, ' setup')
+      }
+    }
 
     s.prependRight(endOffset, code + '\n')
     s.remove(
