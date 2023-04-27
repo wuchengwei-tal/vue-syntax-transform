@@ -8,23 +8,23 @@ onMounted(() => {
 `;
 
 exports[`SFC compile > computed 1`] = `
-"const firstName = ref('Foo');
-const lastName = ref('Bar');
-const fullName = computed(() => {
+"const fullName = computed(() => {
   return firstName.value + ' ' + lastName.value;
-});"
+});
+const lastName = ref('Bar');
+const firstName = ref('Foo');"
 `;
 
 exports[`SFC compile > data 1`] = `
 "import png from './a.png'
       
-      const firstName = ref('Foo');
-const lastName = ref('Bar');
-const n = ref(1);
-const bool = ref(true);
-const obj = ref({});
+      const list = ref([]);
 const timeInterval = ref(null);
-const list = ref([]);"
+const obj = ref({});
+const bool = ref(true);
+const n = ref(1);
+const lastName = ref('Bar');
+const firstName = ref('Foo');"
 `;
 
 exports[`SFC compile > emit 1`] = `
@@ -57,6 +57,22 @@ const route = useRoute();
 }"
 `;
 
+exports[`SFC compile > this 1`] = `
+"const a = ref();
+onMounted(() => {
+  a.value;
+  const that = this;
+  (function () {
+    this.b;
+    that.c;
+  });
+  function func() {
+    this.d;
+    that.e;
+  }
+});"
+`;
+
 exports[`SFC compile > vuex 1`] = `
 "{
   setLoadingState(false);
@@ -67,11 +83,11 @@ exports[`SFC compile > vuex 1`] = `
 `;
 
 exports[`SFC compile > watch 1`] = `
-"const firstName = ref('Foo');
-const lastName = ref('Bar');
-const fullName = ref({
+"const fullName = ref({
   a: 1
 });
+const lastName = ref('Bar');
+const firstName = ref('Foo');
 watch(firstName, () => \\"firstName\\");
 watch(lastName, (v1, v2) => {
   if (v1 !== v2) {

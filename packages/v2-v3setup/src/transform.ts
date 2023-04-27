@@ -44,11 +44,11 @@ export function transformBindings(
 ) {
   const output = []
 
-  function transState(name: string, value: ObjectProperty['value']) {
+  function transState(name: string, value?: Expression) {
     return variableDeclaration('const', [
       variableDeclarator(
         identifier(name),
-        callExpression(identifier('ref'), [value as any])
+        callExpression(identifier('ref'), value ? [value] : [])
       )
     ])
   }
@@ -166,7 +166,10 @@ export function transformBindings(
     }
     const block: typeof value = (walk as any)(value, {
       enter(child: Node, parent: Node) {
-        if (child.type === 'FunctionDeclaration') {
+        if (
+          child.type === 'FunctionDeclaration' ||
+          child.type === 'FunctionExpression'
+        ) {
           ctx.inFuncBody = true
         }
 
@@ -258,8 +261,11 @@ export function transformBindings(
         }
 
         if (name.startsWith('$')) return trans$(property, ctx)
-        if (!ctx.inFuncBody)
-          return memberExpression(property, identifier('value'))
+        if (!(name in bindings))
+          if (!ctx.inFuncBody) {
+            registerBinding(bindings, property, undefined, BindingTypes.DATA)
+            return memberExpression(property, identifier('value'))
+          }
       }
     }
   }
@@ -302,16 +308,6 @@ export function transformBindings(
     }
   }
 
-  for (const [key, { type, value }] of Object.entries(bindings)) {
-    if (isOutVar(type)) ''
-
-    if (type === BindingTypes.DATA) output.push(transState(key, value))
-
-    if (type === BindingTypes.COMPUTED) output.push(transGetters(key, value))
-
-    if (type === BindingTypes.METHOD) output.push(transMethod(key, value))
-  }
-
   for (const [key, { value }] of Object.entries(watcherBindings)) {
     output.push(transWatcher(key, value))
   }
@@ -322,6 +318,14 @@ export function transformBindings(
   }
 
   for (let [key, { type, value }] of Object.entries(bindings)) {
+    if (isOutVar(type)) ''
+
+    if (type === BindingTypes.DATA) output.unshift(transState(key, value))
+
+    if (type === BindingTypes.COMPUTED) output.unshift(transGetters(key, value))
+
+    if (type === BindingTypes.METHOD) output.unshift(transMethod(key, value))
+
     if (type === BindingTypes.$) {
       if (key === 'emit') {
         value = callExpression(identifier('defineEmits'), [
@@ -347,7 +351,7 @@ export function isOutVar(type: BindingTypes) {
   return type === BindingTypes.CONST || type === BindingTypes.LET
 }
 
-export function registerBinding<T = any>(
+export function registerBinding<T = Expression>(
   bindings: BindingMap<T>,
   node: Identifier,
   value: T,

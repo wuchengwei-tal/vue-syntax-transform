@@ -227,4 +227,30 @@ describe('SFC compile', () => {
 
     assertCode(content)
   })
+
+  test('this', () => {
+    const { content } = compile(`
+    <script>
+      export default {
+        mounted(){
+          this.a
+          const that = this
+          ;(function (){
+            this.b
+            that.c
+          })
+          function func(){
+            this.d
+            that.e
+          }
+        },
+      }
+    </script>
+    `)
+    expect(content).toMatch(`this.b`)
+    expect(content).toMatch(`this.d`)
+    expect(content).not.toMatch(`this.a`)
+    expect(content).toMatch(`const a = ref()`)
+    assertCode(content)
+  })
 })
