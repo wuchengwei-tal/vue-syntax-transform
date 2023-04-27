@@ -233,11 +233,16 @@ describe('SFC compile', () => {
     <script>
       export default {
         mounted(){
+          let self
           this.a
           const that = this
+          self = this
+          that.a
           ;(function (){
             this.b
             that.c
+            that.a
+            that.e
           })
           function func(){
             this.d
@@ -250,7 +255,12 @@ describe('SFC compile', () => {
     expect(content).toMatch(`this.b`)
     expect(content).toMatch(`this.d`)
     expect(content).not.toMatch(`this.a`)
+    expect(content).not.toMatch(`that.c`)
+    expect(content).not.toMatch(`that.e`)
+    expect(content).not.toMatch(`const that = this`)
     expect(content).toMatch(`const a = ref()`)
+    expect(content).toMatch(`const c = ref()`)
+    expect(content).toMatch(`const e = ref()`)
     assertCode(content)
   })
 })

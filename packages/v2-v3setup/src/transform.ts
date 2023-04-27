@@ -157,12 +157,14 @@ export function transformBindings(
     membersCount: number
     members: (MemberExpression | OptionalMemberExpression)[]
     transformedMember?: MemberExpression | OptionalMemberExpression | Identifier
+    thisAlias: string[]
   }
   function transBody(value: BlockStatement | Expression): BlockStatement {
     const ctx: Ctx = {
       inFuncBody: false,
       membersCount: 0,
-      members: []
+      members: [],
+      thisAlias: []
     }
     const block: typeof value = (walk as any)(value, {
       enter(child: Node, parent: Node) {
@@ -171,6 +173,39 @@ export function transformBindings(
           child.type === 'FunctionExpression'
         ) {
           ctx.inFuncBody = true
+        }
+
+        if (!ctx.inFuncBody) {
+          if (child.type === 'VariableDeclaration') {
+            for (const decl of child.declarations) {
+              if (
+                decl.init?.type === 'ThisExpression' &&
+                decl.id.type === 'Identifier'
+              ) {
+                ctx.thisAlias.push(decl.id.name)
+                this.remove()
+              }
+              if (
+                decl.init?.type === 'ArrayExpression' &&
+                decl.id.type === 'ArrayPattern'
+              ) {
+                const idx = decl.init.elements.findIndex(
+                  el => el?.type === 'ThisExpression'
+                )
+                const alias = decl.id.elements[idx]
+                if (alias?.type === 'Identifier') {
+                  ctx.thisAlias.push(alias.name)
+                }
+              }
+            }
+          }
+          if (child.type === 'AssignmentExpression') {
+            const { left, right } = child
+            if (right.type === 'ThisExpression' && left.type === 'Identifier') {
+              ctx.thisAlias.push(left.name)
+              this.remove()
+            }
+          }
         }
 
         if (isMember(child)) {
@@ -246,7 +281,9 @@ export function transformBindings(
     ctx: Ctx
   ) {
     const { object, property } = node
-    if (object.type === 'ThisExpression') {
+    const isAlias =
+      object.type === 'Identifier' && ctx.thisAlias.includes(object.name)
+    if (object.type === 'ThisExpression' || isAlias) {
       if (property.type === 'Identifier') {
         const { name } = property
         if (name in bindings) {
@@ -263,6 +300,9 @@ export function transformBindings(
         if (name.startsWith('$')) return trans$(property, ctx)
         if (!(name in bindings))
           if (!ctx.inFuncBody) {
+            registerBinding(bindings, property, undefined, BindingTypes.DATA)
+            return memberExpression(property, identifier('value'))
+          } else if (isAlias) {
             registerBinding(bindings, property, undefined, BindingTypes.DATA)
             return memberExpression(property, identifier('value'))
           }

@@ -58,17 +58,22 @@ const route = useRoute();
 `;
 
 exports[`SFC compile > this 1`] = `
-"const a = ref();
+"const e = ref();
+const c = ref();
+const a = ref();
 onMounted(() => {
+  let self;
   a.value;
-  const that = this;
+  a.value;
   (function () {
     this.b;
-    that.c;
+    c.value;
+    a.value;
+    e.value;
   });
   function func() {
     this.d;
-    that.e;
+    e.value;
   }
 });"
 `;
