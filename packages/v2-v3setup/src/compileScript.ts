@@ -27,6 +27,7 @@ import { generateCodeFrame } from '@vue/shared'
 import { BindingTypes, BindingMap } from './data'
 import { transformBindings, registerBinding } from './transform'
 import { cssTransform } from './css-transform'
+import { templateTransform } from './template-transform'
 
 export function compileScript(
   sfc: SFCDescriptor,
@@ -231,6 +232,8 @@ export function compileScript(
     s.prependRight(style.loc.end.offset, css)
     s.remove(style.loc.start.offset, style.loc.end.offset)
   }
+
+  template && templateTransform(template)
 
   s.trim()
 
