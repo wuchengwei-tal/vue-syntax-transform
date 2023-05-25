@@ -1,5 +1,5 @@
 {
-    "name": "@vue-transform/reactivity-transfrom",
+    "name": "@vue-transform/reactivity-transform",
     "version": "0.0.0",
     "description": "",
     "main": "index.ts",

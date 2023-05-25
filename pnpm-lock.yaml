@@ -41,7 +41,7 @@ importers:
       typescript: 5.0.4
       vitest: 0.31.1
 
-  packages/reactivity-transfrom:
+  packages/reactivity-transform:
     specifiers:
       '@babel/types': ^7.16.0
       '@types/estree': ^0.0.48

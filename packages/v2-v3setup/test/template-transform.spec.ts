@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { transTemplate, assertCode } from './utils'
+import { transTemplate } from './utils'
 
 describe('Template Directives', () => {
   test('v-model usage on components has been reworked, replacing v-bind.sync', () => {

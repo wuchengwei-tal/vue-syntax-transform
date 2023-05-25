@@ -2,7 +2,7 @@ import { type ExtensionContext, window, commands } from 'vscode'
 
 import { minimalEdit } from './utils'
 import { v2ToV3Setup } from '../../v2-v3setup'
-import { reactivityTransform } from '../../reactivity-transfrom'
+import { reactivityTransform } from '../../reactivity-transform'
 
 export function activate(context: ExtensionContext) {
   const transform = (
