@@ -64,3 +64,5 @@ export const OutputOrder = [
   BindingTypes.FILTER,
   BindingTypes.METHOD
 ]
+
+export const RenderFunction = 'RenderFunction'

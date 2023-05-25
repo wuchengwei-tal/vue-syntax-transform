@@ -33,7 +33,12 @@ import {
 import { walk } from 'estree-walker'
 import { capitalize } from '@vue/shared'
 
-import { BindingTypes, BindingMap, LifeCircleHookMap } from './data'
+import {
+  BindingTypes,
+  BindingMap,
+  LifeCircleHookMap,
+  RenderFunction
+} from './data'
 
 const generate = require('@babel/generator').default
 
@@ -73,9 +78,17 @@ export function transformBindings(
   }
 
   function transMethod(name: string, func: ObjectMethod) {
+    let { params } = func
+    if (name === RenderFunction) {
+      const arg1 = params[0]
+      if (arg1?.type === 'Identifier' && arg1.name === 'h') {
+        params.splice(0, 1)
+      }
+    }
+
     return functionDeclaration(
       identifier(name),
-      func.params,
+      params,
       transBody(func.body),
       func.generator,
       func.async

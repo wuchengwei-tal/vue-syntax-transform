@@ -263,4 +263,18 @@ describe('SFC compile', () => {
     expect(content).toMatch(`const e = ref()`)
     assertCode(content)
   })
+
+  test('render prop', () => {
+    const { content } = compile(`
+    <script>
+      export default {
+        render(h){
+          return h('div')
+        },
+      }
+    </script>
+    `)
+
+    expect(content).not.toMatch(`render(h) {`)
+  })
 })

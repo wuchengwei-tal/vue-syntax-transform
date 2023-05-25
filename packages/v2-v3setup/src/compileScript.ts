@@ -24,7 +24,7 @@ import MagicString from 'magic-string'
 
 import { generateCodeFrame } from '@vue/shared'
 
-import { BindingTypes, BindingMap } from './data'
+import { BindingTypes, BindingMap, RenderFunction } from './data'
 import { transformBindings, registerBinding } from './transform'
 import { cssTransform } from './css-transform'
 import { templateTransform } from './template-transform'
@@ -102,6 +102,13 @@ export function compileScript(
     if (key.type === 'StringLiteral') name = key.value
     if (property.type === 'ObjectMethod') {
       if (name === 'data') walkState(optionsBindings, property.body, assets)
+      else if (name === 'render')
+        registerBinding(
+          optionsBindings,
+          identifier(RenderFunction),
+          property,
+          BindingTypes.METHOD
+        )
       else {
         registerBinding(
           hookBindings,
@@ -233,7 +240,7 @@ export function compileScript(
     s.remove(style.loc.start.offset, style.loc.end.offset)
   }
 
-  template && templateTransform(template)
+  template && templateTransform(source)
 
   s.trim()
 
