@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`css transform > should transform deep 1`] = `
+"
+     :deep( .foo) {
+         width: 1rem;
+
+         :deep( .bar) {
+                height: 1rem;
+         }
+     }
+    
+"
+`;
+
+exports[`css transform > should transform px 1`] = `
+"
+v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
+
+v-leave-from,
+.v-enter-to {
+  opacity: 1;
+}
+
+"
+`;

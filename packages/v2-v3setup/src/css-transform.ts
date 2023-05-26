@@ -1,4 +1,4 @@
-import type { CssNode, Dimension, Raw, Selector } from 'css-tree'
+import type { ClassSelector, CssNode, Dimension, Raw, Selector } from 'css-tree'
 import MagicString from 'magic-string'
 const csstree = require('css-tree')
 
@@ -37,11 +37,23 @@ export function _cssTransform(css: string, raw = '') {
     }
   }
 
+  function transClassSelector(node: ClassSelector) {
+    const { start, end } = node.loc!
+    if (node.name === 'v-enter') {
+      s.overwrite(start.offset, end.offset, 'v-enter-from')
+    }
+    if (node.name === 'v-leave') {
+      s.overwrite(start.offset, end.offset, 'v-leave-from')
+    }
+  }
+
   csstree.walk(ast, {
     leave(node: CssNode) {
       if (node.type === 'Dimension') transDimension(node)
 
       if (node.type === 'Selector') transSelector(node)
+
+      if (node.type === 'ClassSelector') transClassSelector(node)
 
       if (node.type === 'Raw') transRaw(node)
     }
