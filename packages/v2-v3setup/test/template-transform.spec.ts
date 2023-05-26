@@ -1,9 +1,10 @@
 import { expect } from 'vitest'
-import { transTemplate } from './utils'
+import { templateTransform } from '../src/template-transform'
+import { Comment } from '../src/data'
 
 describe('Template Directives', () => {
   test('v-model usage on components has been reworked, replacing v-bind.sync', () => {
-    const res = transTemplate(`
+    const res = templateTransform(`
     <template>
         <ChildComponent :title.sync="pageTitle" :[x]="" >
           <GrandChildComponent :title.sync="pageTitle" />
@@ -17,7 +18,7 @@ describe('Template Directives', () => {
   })
 
   test('key usage on <template v-for> and non-v-for nodes has changed', () => {
-    let res = transTemplate(`
+    let res = templateTransform(`
     <template>
       <div>
         <div v-if="condition" key="yes">Yes</div>
@@ -28,7 +29,7 @@ describe('Template Directives', () => {
 
     expect(res).not.toMatch('key=')
 
-    res = transTemplate(`
+    res = templateTransform(`
     <template>
       <div>
         <template v-for="item in list">
@@ -65,7 +66,7 @@ describe('Template Directives', () => {
   })
 
   test('v-if and v-for precedence when used on the same element has changed ', () => {
-    const res = transTemplate(`
+    const res = templateTransform(`
     <template>
       <div>
         <div v-for="item in list" v-if="bool">
@@ -75,11 +76,11 @@ describe('Template Directives', () => {
       </div>
     </template>
     `)
-    //
+    expect(res).toMatch(Comment.vForAndVIf)
   })
 
   test('v-bind="object" is now order-sensitive', () => {
-    const res = transTemplate(`
+    const res = templateTransform(`
     <template>
       <div>
         <div id="red" v-bind="{ id: 'blue' }"></div>
@@ -91,7 +92,7 @@ describe('Template Directives', () => {
   })
 
   test('v-on:event.native modifier has been removed  ', () => {
-    const res = transTemplate(`
+    const res = templateTransform(`
     <template>
       <my-component
         v-on:close="handleComponentEvent"
@@ -104,5 +105,34 @@ describe('Template Directives', () => {
     expect(res).not.toMatch('.native')
     expect(res).toMatch('v-on:click="handleNativeClickEvent"')
     expect(res).toMatch('@mouseup="handleNativeMouseUpEvent"')
+  })
+
+  test('$listeners has been removed / merged into $attrs  ', () => {
+    const res = templateTransform(`
+    <template>
+      <label>
+        <input type="text" v-bind="$attrs" v-on="$listeners" />
+      </label>
+    </template>
+    `)
+
+    expect(res).not.toMatch('$listeners')
+  })
+
+  test('$attrs now includes class and style attributes', () => {
+    const res = templateTransform(`
+    <template>
+      <label>
+        <input type="text" v-bind="$attrs" />
+      </label>
+    </template>
+    <script>
+    export default {
+      inheritAttrs: false
+    }
+    </script>
+    `)
+
+    expect(res).toMatch(Comment.inheritAttrsFalse)
   })
 })

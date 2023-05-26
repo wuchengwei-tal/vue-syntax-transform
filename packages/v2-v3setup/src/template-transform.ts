@@ -1,9 +1,34 @@
 import MagicString from 'magic-string'
-import { ASTElement, ASTNode, SFCBlock } from 'vue-template-compiler'
+import {
+  type ASTElement,
+  type SFCBlock,
+  parseComponent,
+  compile,
+  ASTNode
+} from 'vue-template-compiler'
+import { Comment } from './data'
 
-export function templateTransform(template: { ast?: ASTElement } & SFCBlock) {
+export function templateTransform(source: string) {
+  const descriptor = parseComponent(source)
+  const { template } = descriptor
+  if (!template) return ''
+
+  let inheritAttrs = true
+  if (descriptor.script) {
+    const { content } = descriptor.script
+    const match = content.match(/inheritAttrs\s*:\s*(true|false)/)
+    if (match) inheritAttrs = match[1] === 'true'
+  }
+
+  const { ast } = compile(template.content.trim(), { outputSourceRange: true })
+  return transform({ ast, ...template, inheritAttrs })
+}
+
+type Template = { ast?: ASTElement; inheritAttrs: boolean } & SFCBlock
+
+function transform(template: Template) {
   if (!template || !template.ast) return ''
-  const { ast, content } = template
+  const { ast, content, inheritAttrs } = template
   const s = new MagicString(content)
 
   const offset = 1
@@ -23,7 +48,7 @@ export function templateTransform(template: { ast?: ASTElement } & SFCBlock) {
   function transNode(node: ASTElement) {
     node.attrs?.forEach((attr, i) => {
       // .sync -> v-model
-      if (node.attrsList[i].name === `:${attr.name}.sync`) {
+      if (node.attrsList[i]?.name === `:${attr.name}.sync`) {
         const vModel = `v-model:${attr.name}="${attr.value}"`
         // @ts-ignore
         s.overwrite(attr.start + offset, attr.end + offset, vModel)
@@ -44,7 +69,7 @@ export function templateTransform(template: { ast?: ASTElement } & SFCBlock) {
           if (name.includes(`v-on:${event}`) || name.includes(`@${event}`)) {
             let value = s.original.slice(start + offset, end + offset)
             value = value.replace(`.native`, '')
-            console.log(value, start, end)
+            // console.log(value, start, end)
             s.overwrite(start + offset, end + offset, value)
           }
         })
@@ -60,15 +85,24 @@ export function templateTransform(template: { ast?: ASTElement } & SFCBlock) {
       })
     }
 
+    transDirective(node)
+
+    removeKeyAttr(node)
+  }
+
+  function removeKeyAttr(node: ASTElement) {
     const { ifConditions } = node
+
+    const getKey = (n: ASTNode) =>
+      // @ts-ignore
+      n.rawAttrsMap?.['key'] || n.rawAttrsMap?.[':key']
 
     if (node['for']) {
       // console.log(node.children, node.alias)
       // rm v-for children's key
       node.children.forEach(child => {
         if (child.type !== ELEMENT || !child.key) return
-        // @ts-ignore
-        const key = child?.rawAttrsMap?.['key'] || child?.rawAttrsMap?.[':key']
+        const key = getKey(child)
         if (key) {
           const { start, end } = key
           s.remove(start + offset, end + offset)
@@ -90,13 +124,8 @@ export function templateTransform(template: { ast?: ASTElement } & SFCBlock) {
 
       // add Migration Strategy comment for v-if and v-for
       if (ifConditions?.length) {
-        const comment = `
-        <!-- 
-        It is recommended to avoid using both on the same element due to the syntax ambiguity. 
-        Rather than managing this at the template level, one method for accomplishing this is to create a computed property that filters out a list for the visible elements.
-        -->\n`
         // @ts-ignore
-        s.appendLeft(node.start, comment)
+        s.appendLeft(node.start, Comment.vForAndVIf)
       }
     }
 
@@ -107,9 +136,7 @@ export function templateTransform(template: { ast?: ASTElement } & SFCBlock) {
           // console.log(condition)
           const { block } = condition
 
-          const key =
-            // @ts-ignore
-            block?.rawAttrsMap?.['key'] || block?.rawAttrsMap?.[':key']
+          const key = getKey(block)
           if (key) {
             const { start, end } = key
             s.remove(start + offset, end + offset)
@@ -119,8 +146,28 @@ export function templateTransform(template: { ast?: ASTElement } & SFCBlock) {
     }
   }
 
+  function transDirective(node: ASTElement) {
+    const { directives, attrsList } = node
+    if (!directives) return
+
+    directives.forEach(directive => {
+      // @ts-ignore
+      const { name, value, start, end } = directive
+      if (name === 'on') {
+        if (value === '$listeners') {
+          s.remove(start + offset, end + offset)
+        }
+      }
+
+      if (name === 'bind' && value === '$attrs' && !inheritAttrs) {
+        // @ts-ignore
+        s.appendLeft(node.start + offset, Comment.inheritAttrsFalse)
+      }
+    })
+  }
+
   walk(ast)
-  console.log(s.toString())
+  // console.log(s.toString())
   return s.toString()
 }
 
