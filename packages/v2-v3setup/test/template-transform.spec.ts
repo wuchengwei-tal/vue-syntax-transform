@@ -135,4 +135,17 @@ describe('Template Directives', () => {
 
     expect(res).toMatch(Comment.inheritAttrsFalse)
   })
+
+  test('Special is attribute usage is restricted to the reserved <component> tag only  ', () => {
+    const res = templateTransform(`
+    <template>
+      <table>
+        <tr is="blog-post-row"></tr>
+      </table>
+    </template>
+    `)
+
+    expect(res).not.toMatch('<tr')
+    expect(res).toMatch('<component')
+  })
 })

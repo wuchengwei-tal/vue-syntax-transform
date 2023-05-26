@@ -88,6 +88,8 @@ function transform(template: Template) {
     transDirective(node)
 
     removeKeyAttr(node)
+
+    transIsAttr(node)
   }
 
   function removeKeyAttr(node: ASTElement) {
@@ -164,6 +166,19 @@ function transform(template: Template) {
         s.appendLeft(node.start + offset, Comment.inheritAttrsFalse)
       }
     })
+  }
+
+  function transIsAttr(node: ASTElement) {
+    if (node.attrsMap['is']) {
+      // @ts-ignore
+      const { tag, start, end } = node
+      if (tag !== 'component') {
+        let value = s.original.slice(start + offset, end + offset)
+        value = value.replace(`<${tag}`, '<component')
+        value = value.replace(`</${tag}>`, '</component>')
+        s.overwrite(start + offset, end + offset, value)
+      }
+    }
   }
 
   walk(ast)
