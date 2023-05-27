@@ -1,4 +1,4 @@
-import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
+import { parse as _parse, ParserOptions } from '@babel/parser'
 
 import {
   Node,
@@ -15,43 +15,19 @@ import {
   ObjectPattern,
   identifier
 } from '@babel/types'
-import {
-  SFCDescriptor,
-  SFCScriptBlock,
-  SFCScriptCompileOptions
-} from '@vue/compiler-sfc'
+
 import MagicString from 'magic-string'
 
 import { generateCodeFrame } from '@vue/shared'
 
 import { BindingTypes, BindingMap, RenderFunction } from './data'
 import { transformBindings, registerBinding } from './transform'
-import { cssTransform } from './css-transform'
-import { templateTransform } from './template-transform'
 
 export function compileScript(
-  sfc: SFCDescriptor,
-  options: SFCScriptCompileOptions
-): SFCScriptBlock | any {
-  let { script, source, styles, template } = sfc
-  if (!script) return { content: source }
-
-  const plugins: ParserPlugin[] = []
-  if (script.lang === 'jsx') {
-    plugins.push('jsx')
-  } else {
-    // If don't match the case of adding jsx, should remove the jsx from the babelParserPlugins
-    if (options.babelParserPlugins)
-      options.babelParserPlugins = options.babelParserPlugins.filter(
-        n => n !== 'jsx'
-      )
-  }
-  if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-
-  plugins.push('typescript')
-  if (!plugins.includes('decorators')) {
-    plugins.push('decorators-legacy')
-  }
+  source: string,
+  options: { id: string }
+): { content: string; bindings?: Record<string, BindingTypes> } {
+  if (!source) return { content: source }
 
   // metadata that needs to be returned
   const bindingMetadata: Record<string, BindingTypes> = {}
@@ -66,19 +42,19 @@ export function compileScript(
   const components: { alias?: string; name: string }[] = []
   let defaultExport: Node | undefined
   const s = new MagicString(source)
-  const startOffset = script!.loc.start.offset
-  const endOffset = script!.loc.end.offset
+  const startOffset = 0
+  const endOffset = source.length
 
   function parse(
     input: string,
-    options: ParserOptions,
+    _options: ParserOptions,
     offset: number
   ): Program {
     try {
-      return _parse(input, options).program
+      return _parse(input, _options).program
     } catch (e: any) {
       e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
-        sfc.filename
+        options.id
       }\n${generateCodeFrame(source, e.pos + offset, e.pos + offset + 1)}`
       throw e
     }
@@ -166,8 +142,8 @@ export function compileScript(
 
   // 0. parse both <script> blocks
   const scriptAst = parse(
-    script.content,
-    { plugins, sourceType: 'module' },
+    source,
+    { plugins: [], sourceType: 'module' },
     startOffset
   )
   if (!scriptAst) return { content: source }
@@ -204,28 +180,16 @@ export function compileScript(
   }
 
   // . remove non-script content
-  if (__TEST__) {
-    s.remove(0, startOffset)
-    s.remove(endOffset, source.length)
-  }
+  s.remove(0, startOffset)
+  s.remove(endOffset, source.length)
 
   for (const key in optionsBindings) {
     bindingMetadata[key] = optionsBindings[key].type
   }
 
-  // transform
   const code = transformBindings(optionsBindings, watcherBindings, hookBindings)
 
   if (defaultExport) {
-    if (!__TEST__) {
-      let i = startOffset
-      while (source[i--] === '>');
-      while (source[--i] !== '<');
-      if (source.slice(i, i + 7) === '<script') {
-        s.prependRight(i + 7, ' setup')
-      }
-    }
-
     s.prependRight(endOffset, code + '\n')
     s.remove(
       startOffset + defaultExport.start!,
@@ -233,30 +197,11 @@ export function compileScript(
     )
   }
 
-  // css
-  for (const style of styles) {
-    const css = cssTransform(style.content)
-    s.prependRight(style.loc.end.offset, css)
-    s.remove(style.loc.start.offset, style.loc.end.offset)
-  }
-
-  template && templateTransform(source)
-
   s.trim()
 
   return {
-    ...script,
     bindings: bindingMetadata,
-    // imports: userImports,
-    content: s.toString(),
-    // map: genSourceMap
-    //   ? (s.generateMap({
-    //       source: filename,
-    //       hires: true,
-    //       includeContent: true
-    //     }) as unknown as RawSourceMap)
-    //   : undefined,
-    scriptAst: scriptAst?.body
+    content: s.toString()
   }
 }
 

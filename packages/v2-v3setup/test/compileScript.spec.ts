@@ -1,11 +1,11 @@
 import { expect } from 'vitest'
 
-import { BindingTypes } from '../src/data'
-import { compileSFCScript as compile, assertCode } from './utils'
+import { BindingTypes, sfcTransform } from '../src'
+import { assertCode } from './utils'
 
-describe('SFC compile', () => {
+describe('SFC sfcTransform', () => {
   test('data', () => {
-    const { content, bindings } = compile(`
+    const { content, bindings } = sfcTransform(`
       <script>
       import png from './a.png'
       export default {
@@ -23,7 +23,7 @@ describe('SFC compile', () => {
         }
       }
       </script>
-      `)
+      `).script!
 
     expect(bindings).toStrictEqual({
       firstName: BindingTypes.DATA,
@@ -40,7 +40,7 @@ describe('SFC compile', () => {
   })
 
   test('computed', () => {
-    const { content, bindings } = compile(`
+    const { content, bindings } = sfcTransform(`
     <script>
     export default {
       data() {
@@ -56,7 +56,7 @@ describe('SFC compile', () => {
       },
     }
     </script>
-    `)
+    `).script!
 
     expect(bindings).toStrictEqual({
       firstName: BindingTypes.DATA,
@@ -71,7 +71,7 @@ describe('SFC compile', () => {
   })
 
   test('watch', () => {
-    const { content, bindings } = compile(`
+    const { content, bindings } = sfcTransform(`
     <script>
     export default {
       data() {
@@ -103,7 +103,7 @@ describe('SFC compile', () => {
       }
     }
     </script>
-    `)
+    `).script!
 
     expect(bindings).toStrictEqual({
       firstName: BindingTypes.DATA,
@@ -120,7 +120,7 @@ describe('SFC compile', () => {
   })
 
   test('$refs', () => {
-    const { content } = compile(`
+    const { content } = sfcTransform(`
     <script>
       export default {
         mounted(){
@@ -128,7 +128,7 @@ describe('SFC compile', () => {
         }
       }
     </script>
-    `)
+    `).script!
     expect(content).toMatch('const listRef = ref()')
     expect(content).toMatch(' listRef.page')
     expect(content).not.toMatch('mounted(')
@@ -138,7 +138,7 @@ describe('SFC compile', () => {
   })
 
   test('router', () => {
-    const { content } = compile(`
+    const { content } = sfcTransform(`
     <script>
       export default {
         created(){
@@ -147,7 +147,7 @@ describe('SFC compile', () => {
         }
       }
     </script>
-    `)
+    `).script!
     expect(content).toMatch('const route = useRoute()')
     expect(content).toMatch(' route.fullPath')
     expect(content).toMatch('const router = useRouter()')
@@ -158,7 +158,7 @@ describe('SFC compile', () => {
   })
 
   test('emit', () => {
-    const { content } = compile(`
+    const { content } = sfcTransform(`
     <script>
       export default {
         created(){
@@ -167,7 +167,7 @@ describe('SFC compile', () => {
         },
       }
     </script>
-    `)
+    `).script!
 
     expect(content).toMatch(`const emit = defineEmits(["click", "change"])`)
     expect(content).toMatch(` emit('click', 0)`)
@@ -177,7 +177,7 @@ describe('SFC compile', () => {
   })
 
   test('vuex', () => {
-    const { content } = compile(`
+    const { content } = sfcTransform(`
     <script>
       export default {
         created(){
@@ -190,7 +190,7 @@ describe('SFC compile', () => {
         },
       }
     </script>
-    `)
+    `).script!
 
     expect(content).not.toMatch(`this.$store`)
     expect(content).not.toMatch(`registerModule`)
@@ -204,7 +204,7 @@ describe('SFC compile', () => {
   })
 
   test('props', () => {
-    const { content } = compile(`
+    const { content } = sfcTransform(`
     <script>
       export default {
         props: {
@@ -220,7 +220,7 @@ describe('SFC compile', () => {
         
       }
     </script>
-    `)
+    `).script!
 
     expect(content).not.toMatch(`this.`)
     expect(content).toMatch(`props.prop`)
@@ -229,7 +229,7 @@ describe('SFC compile', () => {
   })
 
   test('this', () => {
-    const { content } = compile(`
+    const { content } = sfcTransform(`
     <script>
       export default {
         mounted(){
@@ -251,7 +251,7 @@ describe('SFC compile', () => {
         },
       }
     </script>
-    `)
+    `).script!
     expect(content).toMatch(`this.b`)
     expect(content).toMatch(`this.d`)
     expect(content).not.toMatch(`this.a`)
@@ -265,7 +265,7 @@ describe('SFC compile', () => {
   })
 
   test('render prop', () => {
-    const { content } = compile(`
+    const { content } = sfcTransform(`
     <script>
       export default {
         render(h){
@@ -273,7 +273,7 @@ describe('SFC compile', () => {
         },
       }
     </script>
-    `)
+    `).script!
 
     expect(content).not.toMatch(`render(h) {`)
   })

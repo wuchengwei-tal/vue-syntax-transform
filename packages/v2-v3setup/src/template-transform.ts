@@ -1,33 +1,11 @@
 import MagicString from 'magic-string'
-import {
-  type ASTElement,
-  type SFCBlock,
-  parseComponent,
-  compile,
-  ASTNode
-} from 'vue-template-compiler'
+import type { ASTElement, SFCBlock, ASTNode } from 'vue-template-compiler'
 import { Comment } from './data'
-
-export function templateTransform(source: string) {
-  const descriptor = parseComponent(source)
-  const { template } = descriptor
-  if (!template) return ''
-
-  let inheritAttrs = true
-  if (descriptor.script) {
-    const { content } = descriptor.script
-    const match = content.match(/inheritAttrs\s*:\s*(true|false)/)
-    if (match) inheritAttrs = match[1] === 'true'
-  }
-
-  const { ast } = compile(template.content.trim(), { outputSourceRange: true })
-  return transform({ ast, ...template, inheritAttrs })
-}
 
 type Template = { ast?: ASTElement; inheritAttrs: boolean } & SFCBlock
 
-function transform(template: Template) {
-  if (!template || !template.ast) return ''
+export function templateTransform(template: Template): { content: string } {
+  if (!template || !template.ast) return { content: '' }
   const { ast, content, inheritAttrs } = template
   const s = new MagicString(content)
 
@@ -183,7 +161,7 @@ function transform(template: Template) {
 
   walk(ast)
   // console.log(s.toString())
-  return s.toString()
+  return { content: s.toString() }
 }
 
 const ELEMENT = 1

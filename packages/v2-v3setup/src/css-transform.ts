@@ -8,7 +8,7 @@ export function cssTransform(css: string) {
   return _cssTransform(transComment(css))
 }
 
-export function _cssTransform(css: string, raw = '') {
+function _cssTransform(css: string, raw = '') {
   const s = new MagicString(css)
   const ast = csstree.parse(css, { positions: true })
 

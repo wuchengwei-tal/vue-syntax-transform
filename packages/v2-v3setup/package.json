@@ -2,7 +2,7 @@
   "name": "@vue-transform/v2-v3setup",
   "version": "0.0.0",
   "description": "",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "dependencies": {
     "@babel/generator": "^7.21.9",
     "@babel/traverse": "^7.21.5",

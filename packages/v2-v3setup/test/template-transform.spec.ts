@@ -1,10 +1,10 @@
 import { expect } from 'vitest'
-import { templateTransform } from '../src/template-transform'
+import { sfcTransform } from '../src'
 import { Comment } from '../src/data'
 
 describe('Template Directives', () => {
   test('v-model usage on components has been reworked, replacing v-bind.sync', () => {
-    const res = templateTransform(`
+    const { template } = sfcTransform(`
     <template>
         <ChildComponent :title.sync="pageTitle" :[x]="" >
           <GrandChildComponent :title.sync="pageTitle" />
@@ -12,13 +12,15 @@ describe('Template Directives', () => {
     </template>
     `)
 
-    expect(res).not.toMatch('.sync')
-    expect(res).toMatch('ChildComponent v-model:title="pageTitle"')
-    expect(res).toMatch('GrandChildComponent v-model:title="pageTitle"')
+    const { content } = template!
+
+    expect(content).not.toMatch('.sync')
+    expect(content).toMatch('ChildComponent v-model:title="pageTitle"')
+    expect(content).toMatch('GrandChildComponent v-model:title="pageTitle"')
   })
 
   test('key usage on <template v-for> and non-v-for nodes has changed', () => {
-    let res = templateTransform(`
+    var { template } = sfcTransform(`
     <template>
       <div>
         <div v-if="condition" key="yes">Yes</div>
@@ -26,15 +28,15 @@ describe('Template Directives', () => {
       </div>
     </template>
     `)
+    var { content } = template!
+    expect(content).not.toMatch('key=')
 
-    expect(res).not.toMatch('key=')
-
-    res = templateTransform(`
+    var { template } = sfcTransform(`
     <template>
       <div>
         <template v-for="item in list">
           <div :key="'heading-' + item.id">...</div>
-          <span :key="'content-' + item.id">...</span>
+          <span :key="'template-' + item.id">...</span>
         </template>
 
         <template v-for="item1 in list1">
@@ -54,19 +56,19 @@ describe('Template Directives', () => {
       </div>
     </template>
     `)
-
-    expect(res).toMatch(
+    var { content } = template!
+    expect(content).toMatch(
       '<template v-for="(item, i_item) in list" :key="i_item"'
     )
-    expect(res).toMatch(
+    expect(content).toMatch(
       '<template v-for="(item1, i_item1) in list1" :key="i_item1"'
     )
-    res = res.replace(/\<template .*\>/gm, '')
-    expect(res).not.toMatch('key=')
+    content = content?.replace(/\<template .*\>/gm, '')
+    expect(content).not.toMatch('key=')
   })
 
   test('v-if and v-for precedence when used on the same element has changed ', () => {
-    const res = templateTransform(`
+    const { template } = sfcTransform(`
     <template>
       <div>
         <div v-for="item in list" v-if="bool">
@@ -76,11 +78,12 @@ describe('Template Directives', () => {
       </div>
     </template>
     `)
-    expect(res).toMatch(Comment.vForAndVIf)
+
+    expect(template!.content).toMatch(Comment.vForAndVIf)
   })
 
   test('v-bind="object" is now order-sensitive', () => {
-    const res = templateTransform(`
+    const { template } = sfcTransform(`
     <template>
       <div>
         <div id="red" v-bind="{ id: 'blue' }"></div>
@@ -88,11 +91,12 @@ describe('Template Directives', () => {
     </template>
     `)
 
-    expect(res.indexOf('red') > res.indexOf('blue')).toBe(true)
+    const { content } = template!
+    expect(content.indexOf('red') > content.indexOf('blue')).toBe(true)
   })
 
   test('v-on:event.native modifier has been removed  ', () => {
-    const res = templateTransform(`
+    const { template } = sfcTransform(`
     <template>
       <my-component
         v-on:close="handleComponentEvent"
@@ -102,13 +106,14 @@ describe('Template Directives', () => {
     </template>
     `)
 
-    expect(res).not.toMatch('.native')
-    expect(res).toMatch('v-on:click="handleNativeClickEvent"')
-    expect(res).toMatch('@mouseup="handleNativeMouseUpEvent"')
+    const { content } = template!
+    expect(content).not.toMatch('.native')
+    expect(content).toMatch('v-on:click="handleNativeClickEvent"')
+    expect(content).toMatch('@mouseup="handleNativeMouseUpEvent"')
   })
 
   test('$listeners has been removed / merged into $attrs  ', () => {
-    const res = templateTransform(`
+    const { template } = sfcTransform(`
     <template>
       <label>
         <input type="text" v-bind="$attrs" v-on="$listeners" />
@@ -116,11 +121,11 @@ describe('Template Directives', () => {
     </template>
     `)
 
-    expect(res).not.toMatch('$listeners')
+    expect(template!.content).not.toMatch('$listeners')
   })
 
   test('$attrs now includes class and style attributes', () => {
-    const res = templateTransform(`
+    const { template } = sfcTransform(`
     <template>
       <label>
         <input type="text" v-bind="$attrs" />
@@ -133,11 +138,11 @@ describe('Template Directives', () => {
     </script>
     `)
 
-    expect(res).toMatch(Comment.inheritAttrsFalse)
+    expect(template!.content).toMatch(Comment.inheritAttrsFalse)
   })
 
   test('Special is attribute usage is restricted to the reserved <component> tag only  ', () => {
-    const res = templateTransform(`
+    const { template } = sfcTransform(`
     <template>
       <table>
         <tr is="blog-post-row"></tr>
@@ -145,7 +150,8 @@ describe('Template Directives', () => {
     </template>
     `)
 
-    expect(res).not.toMatch('<tr')
-    expect(res).toMatch('<component')
+    const { content } = template!
+    expect(content).not.toMatch('<tr')
+    expect(content).toMatch('<component')
   })
 })

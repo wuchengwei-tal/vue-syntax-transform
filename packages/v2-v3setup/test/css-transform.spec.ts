@@ -1,9 +1,10 @@
 import { expect } from 'vitest'
-import { cssTransform } from '../src/css-transform'
+import { sfcTransform } from '../src'
 
 describe('css transform', () => {
   it('should transform deep', () => {
-    const res = cssTransform(`
+    const { styles } = sfcTransform(`
+    <style lang="" scoped>
      /deep/ .foo {
          width: 100px;
 
@@ -11,24 +12,26 @@ describe('css transform', () => {
                 height: 100px;
          }
      }
+     </style>
     `)
 
-    expect(res).toMatchSnapshot()
+    expect(styles![0]).toMatchSnapshot()
   })
 
-  it('should transform px', () => {
-    const res = cssTransform(`
-.v-enter,
-.v-leave-to {
-  opacity: 0;
-}
+  it('should transform transition name', () => {
+    const { styles } = sfcTransform(`
+    <style>
+    .v-enter,
+    .v-leave-to {
+      opacity: 0;
+    }
 
-.v-leave,
-.v-enter-to {
-  opacity: 1;
-}
-`)
-
-    expect(res).toMatchSnapshot()
+    .v-leave,
+    .v-enter-to {
+      opacity: 1;
+    }
+    </style>
+    `)
+    expect(styles![0]).toMatchSnapshot()
   })
 })

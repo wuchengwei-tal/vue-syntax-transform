@@ -2,18 +2,18 @@
 
 exports[`css transform > should transform deep 1`] = `
 "
-     :deep( .foo) {
-         width: 1rem;
+:deep( .foo) {
+    width: 1rem;
 
-         :deep( .bar) {
-                height: 1rem;
-         }
-     }
-    
+    :deep( .bar) {
+           height: 1rem;
+    }
+}
+
 "
 `;
 
-exports[`css transform > should transform px 1`] = `
+exports[`css transform > should transform transition name 1`] = `
 "
 v-enter-from,
 .v-leave-to {

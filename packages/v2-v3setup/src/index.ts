@@ -1,7 +1,16 @@
-import { parse } from '@vue/compiler-sfc'
-import { compileScript } from './src/compileScript'
+import {
+  type SFCDescriptor,
+  parseComponent,
+  compile
+} from 'vue-template-compiler'
 
-export * from './src/data'
+import { compileScript } from './compileScript'
+
+import { templateTransform } from './template-transform'
+import { cssTransform } from './css-transform'
+import MagicString from 'magic-string'
+
+export * from './data'
 
 export function v2ToV3Setup(src: string, id: string) {
   if (!/\.vue|\.js$/.test(id) || !src) return { content: '' }
@@ -14,12 +23,68 @@ export function v2ToV3Setup(src: string, id: string) {
     suffix = '</script>'
     src = prefix + src + suffix
   }
-  const { descriptor } = parse(src)
-
-  const result = compileScript(descriptor, { id })
+  const result = sfcTransform(src, id)
   prefix && (result.content = result.content.replace(prefix, ''))
   suffix && (result.content = result.content.replace(suffix, ''))
   return result
+}
+
+type TransformedSFC = {
+  template?: ReturnType<typeof templateTransform>
+  script?: ReturnType<typeof compileScript>
+  styles?: ReturnType<typeof cssTransform>[]
+  content: string
+}
+
+export function sfcTransform(sfc: string, id = '') {
+  const descriptor = parseComponent(sfc) as SFCDescriptor & {
+    source: string
+    cssVars: string[]
+    errors: any[]
+  }
+
+  const { script, template, styles, source } = descriptor
+
+  const s = new MagicString(source)
+
+  const ret: TransformedSFC = { content: '', styles: [] }
+
+  let inheritAttrs = true
+  if (script) {
+    // console.log(descriptor)
+    const match = script.content.match(/inheritAttrs\s*:\s*(true|false)/)
+    if (match) inheritAttrs = match[1] === 'true'
+  }
+
+  if (template) {
+    const { content, start, end } = template
+    const { ast } = compile(content.trim(), { outputSourceRange: true })
+    ret.template = templateTransform({ ast, ...template, inheritAttrs })
+    s.overwrite(start!, end!, ret.template.content)
+  }
+
+  if (script) {
+    const { start, end, content } = script
+    ret.script = compileScript(content, { id })
+    s.overwrite(start!, end!, ret.script.content)
+    let i = start!
+    while (source[i--] === '>');
+    while (source[--i] !== '<');
+    if (source.slice(i, i + 7) === '<script') {
+      s.prependRight(i + 7, ' setup')
+    }
+  }
+
+  if (styles.length) {
+    styles.forEach(style => {
+      const { start, end, content } = style
+      const res = cssTransform(content)
+      ret.styles?.push(res)
+      s.overwrite(start!, end!, res)
+    })
+  }
+
+  return { ...ret, content: s.toString() }
 }
 
 function transformActions(code: string) {
