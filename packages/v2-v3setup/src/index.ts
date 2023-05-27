@@ -58,7 +58,11 @@ export function sfcTransform(sfc: string, id = '') {
 
   if (template) {
     const { content, start, end } = template
-    const { ast } = compile(content.trim(), { outputSourceRange: true })
+
+    const { ast } = compile(content, {
+      outputSourceRange: true,
+      whitespace: 'preserve'
+    })
     ret.template = templateTransform({ ast, ...template, inheritAttrs })
     s.overwrite(start!, end!, ret.template.content)
   }

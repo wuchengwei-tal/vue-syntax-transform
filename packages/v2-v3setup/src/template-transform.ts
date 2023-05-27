@@ -27,9 +27,9 @@ export function templateTransform(template: Template): { content: string } {
     node.attrs?.forEach((attr, i) => {
       // .sync -> v-model
       if (node.attrsList[i]?.name === `:${attr.name}.sync`) {
-        const vModel = `v-model:${attr.name}="${attr.value}"`
+        const vModel = ` v-model:${attr.name}="${attr.value}" `
         // @ts-ignore
-        s.overwrite(attr.start + offset, attr.end + offset, vModel)
+        s.overwrite(attr.start + offset, attr.end + offset + 1, vModel)
       }
     })
 

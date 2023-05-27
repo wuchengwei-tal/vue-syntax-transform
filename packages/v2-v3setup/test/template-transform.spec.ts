@@ -15,8 +15,8 @@ describe('Template Directives', () => {
     const { content } = template!
 
     expect(content).not.toMatch('.sync')
-    expect(content).toMatch('ChildComponent v-model:title="pageTitle"')
-    expect(content).toMatch('GrandChildComponent v-model:title="pageTitle"')
+    expect(content).toMatch('ChildComponent  v-model:title="pageTitle" ')
+    expect(content).toMatch('GrandChildComponent  v-model:title="pageTitle" ')
   })
 
   test('key usage on <template v-for> and non-v-for nodes has changed', () => {
