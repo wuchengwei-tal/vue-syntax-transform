@@ -151,7 +151,7 @@ function parseInside(code: string, s: number, p: keyof typeof Pair) {
   while (e < code.length - 1) {
     const ch = code[e++]
     if (ch === p) cnt++
-    if (ch == Pair[p]) {
+    if (ch === Pair[p]) {
       if (cnt) cnt--
       else break
     }

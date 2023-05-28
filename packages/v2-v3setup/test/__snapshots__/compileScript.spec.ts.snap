@@ -213,3 +213,110 @@ watch(fullName, (v1, v2) => {
 });
 watch(() => fullName.a, (v1, v2) => {});"
 `;
+
+exports[`script transform > $refs 1`] = `
+"const listRef = ref();
+onMounted(() => {
+  listRef.page;
+});"
+`;
+
+exports[`script transform > computed 1`] = `
+"const fullName = computed(() => {
+  return firstName.value + ' ' + lastName.value;
+});
+const lastName = ref('Bar');
+const firstName = ref('Foo');"
+`;
+
+exports[`script transform > data 1`] = `
+"import png from './a.png'
+      
+      const list = ref([]);
+const timeInterval = ref(null);
+const obj = ref({});
+const bool = ref(true);
+const n = ref(1);
+const lastName = ref('Bar');
+const firstName = ref('Foo');"
+`;
+
+exports[`script transform > emit 1`] = `
+"const emit = defineEmits([\\"click\\", \\"change\\"]);
+{
+  emit('click', 0);
+  emit('change', 1);
+}"
+`;
+
+exports[`script transform > props 1`] = `
+"const props = defineProps({
+  prop: {
+    type: Object,
+    default: () => {}
+  },
+  bool: Boolean
+});
+onMounted(() => {
+  props.prop;
+});"
+`;
+
+exports[`script transform > router 1`] = `
+"const router = useRouter();
+const route = useRoute();
+{
+  route.fullPath;
+  router.push('/list');
+}"
+`;
+
+exports[`script transform > this 1`] = `
+"const e = ref();
+const c = ref();
+const a = ref();
+onMounted(() => {
+  let self;
+  a.value;
+  a.value;
+  (function () {
+    this.b;
+    c.value;
+    a.value;
+    e.value;
+  });
+  function func() {
+    this.d;
+    e.value;
+  }
+});"
+`;
+
+exports[`script transform > vuex 1`] = `
+"{
+  setLoadingState(false);
+  getServerTime();
+  const a = a;
+  const b = b;
+}"
+`;
+
+exports[`script transform > watch 1`] = `
+"const fullName = ref({
+  a: 1
+});
+const lastName = ref('Bar');
+const firstName = ref('Foo');
+watch(firstName, () => \\"firstName\\");
+watch(lastName, (v1, v2) => {
+  if (v1 !== v2) {
+    firstName.value = 'firstName';
+  }
+}, {
+  deep: true
+});
+watch(fullName, (v1, v2) => {
+  firstName.value = 'fullName';
+});
+watch(() => fullName.a, (v1, v2) => {});"
+`;

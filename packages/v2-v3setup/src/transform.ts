@@ -15,7 +15,6 @@ import {
   objectExpression,
   ObjectExpression,
   ObjectMethod,
-  ObjectProperty,
   OptionalMemberExpression,
   program,
   Statement,
@@ -37,7 +36,8 @@ import {
   BindingTypes,
   BindingMap,
   LifeCircleHookMap,
-  RenderFunction
+  RenderFunction,
+  VModel
 } from './data'
 
 const generate = require('@babel/generator').default
@@ -45,7 +45,8 @@ const generate = require('@babel/generator').default
 export function transformBindings(
   bindings: BindingMap<any>,
   watcherBindings: BindingMap<any>,
-  hookBindings: BindingMap<ObjectMethod>
+  hookBindings: BindingMap<ObjectMethod>,
+  model: VModel
 ) {
   const output = []
 
@@ -180,7 +181,7 @@ export function transformBindings(
       thisAlias: []
     }
     const block: typeof value = (walk as any)(value, {
-      enter(child: Node, parent: Node) {
+      enter(child: Node, _parent: Node) {
         if (
           child.type === 'FunctionDeclaration' ||
           child.type === 'FunctionExpression'
@@ -237,6 +238,9 @@ export function transformBindings(
               if (property.name === '$emit') {
                 const evts: string[] = bindings['emit']?.value || []
                 if (!evts.includes(evt.value)) {
+                  if (model.event === evt.value) {
+                    evt.value = 'update:modelValue'
+                  }
                   evts.push(evt.value)
 
                   registerBinding(
@@ -306,7 +310,9 @@ export function transformBindings(
           if (type === BindingTypes.METHOD || type === BindingTypes.FILTER)
             return property
           if (type === BindingTypes.PROPS) {
-            return memberExpression(identifier('props'), property)
+            let prop = property
+            if (name === model.prop) prop = identifier('modelValue')
+            return memberExpression(identifier('props'), prop)
           }
         }
 
@@ -371,8 +377,6 @@ export function transformBindings(
   }
 
   for (let [key, { type, value }] of Object.entries(bindings)) {
-    if (isOutVar(type)) ''
-
     if (type === BindingTypes.DATA) output.unshift(transState(key, value))
 
     if (type === BindingTypes.COMPUTED) output.unshift(transGetters(key, value))
@@ -400,10 +404,6 @@ export function transformBindings(
   return output.length ? generate(program(output)).code || '' : ''
 }
 
-export function isOutVar(type: BindingTypes) {
-  return type === BindingTypes.CONST || type === BindingTypes.LET
-}
-
 export function registerBinding<T = Expression>(
   bindings: BindingMap<T>,
   node: Identifier,
@@ -412,11 +412,6 @@ export function registerBinding<T = Expression>(
 ) {
   if (node.name in bindings) {
     const name = node.name
-    // const name = (isOutVar(type) ? 'const_' : '') + node.name
-
-    // if (!isOutVar(type) && isOutVar(bindings[node.name].type)) {
-    //   bindings['const_' + node.name] = bindings[node.name]
-    // }
     bindings[name].type = type
     if (value) bindings[name].value = value
   } else bindings[node.name] = { type, value }

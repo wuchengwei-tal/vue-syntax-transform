@@ -20,7 +20,7 @@ import MagicString from 'magic-string'
 
 import { generateCodeFrame } from '@vue/shared'
 
-import { BindingTypes, BindingMap, RenderFunction } from './data'
+import { BindingTypes, BindingMap, RenderFunction, VModel } from './data'
 import { transformBindings, registerBinding } from './transform'
 
 export function compileScript(
@@ -35,6 +35,7 @@ export function compileScript(
   const watcherBindings: BindingMap<ObjectProperty['value'] | ObjectMethod> =
     Object.create(null)
   const hookBindings: BindingMap<ObjectMethod> = Object.create(null)
+  const model: VModel = { exist: false, prop: 'value', event: 'input' }
 
   let name = ''
   const mixins = []
@@ -128,6 +129,8 @@ export function compileScript(
 
       if (name === 'props') walkProps(optionsBindings, property)
 
+      if (name === 'model') updateModel(model, property)
+
       if (name === 'filters')
         walkMethods(optionsBindings, property, BindingTypes.FILTER)
 
@@ -137,6 +140,35 @@ export function compileScript(
         walkMethods(optionsBindings, property, BindingTypes.METHOD)
 
       if (name === 'watch') walkWatches(watcherBindings, property)
+    }
+  }
+
+  function walkProps(bindings: BindingMap<any>, property: ObjectProperty) {
+    const { value } = property
+    if (value.type === 'ObjectExpression') {
+      if (value.properties.length) {
+        const props = property.key as Identifier
+        registerBinding(bindings, props, value, BindingTypes.$)
+      }
+      for (const p of value.properties) {
+        if (p.type === 'ObjectProperty') {
+          const { key, value } = p
+          if (key.type === 'Identifier') {
+            if (key.name === model.prop) {
+              if (!model.exist) {
+                model.exist = /emit\(('|")input/.test(source)
+              }
+              registerBinding(
+                bindings,
+                identifier(key.name),
+                value,
+                BindingTypes.PROPS
+              )
+              key.name = 'modelValue'
+            } else registerBinding(bindings, key, null, BindingTypes.PROPS)
+          }
+        }
+      }
     }
   }
 
@@ -187,7 +219,12 @@ export function compileScript(
     bindingMetadata[key] = optionsBindings[key].type
   }
 
-  const code = transformBindings(optionsBindings, watcherBindings, hookBindings)
+  const code = transformBindings(
+    optionsBindings,
+    watcherBindings,
+    hookBindings,
+    model
+  )
 
   if (defaultExport) {
     s.prependRight(endOffset, code + '\n')
@@ -283,22 +320,6 @@ function walkMethods(
       if (func.type === 'ObjectMethod') {
         if (func.key.type === 'Identifier')
           registerBinding(bindings, func.key, func, type)
-      }
-    }
-  }
-}
-
-function walkProps(bindings: BindingMap<any>, property: ObjectProperty) {
-  const { value } = property
-  if (value.type === 'ObjectExpression') {
-    if (value.properties.length) {
-      const props = property.key as Identifier
-      registerBinding(bindings, props, value, BindingTypes.$)
-    }
-    for (const p of value.properties) {
-      if (p.type === 'ObjectProperty') {
-        if (p.key.type === 'Identifier')
-          registerBinding(bindings, p.key, null, BindingTypes.PROPS)
       }
     }
   }
@@ -408,6 +429,22 @@ function walkPattern(node: Node, bindings: BindingMap<any>, isConst: boolean) {
       registerBinding(bindings, node.left, '', type)
     } else {
       walkPattern(node.left, bindings, isConst)
+    }
+  }
+}
+
+function updateModel(model: VModel, property: ObjectProperty) {
+  model.exist = true
+  const { value } = property
+  if (value.type === 'ObjectExpression') {
+    for (const p of value.properties) {
+      if (p.type === 'ObjectProperty') {
+        const { key, value } = p
+        if (key.type === 'Identifier' && value.type === 'StringLiteral') {
+          if (key.name === 'prop') model.prop = value.value
+          if (key.name === 'event') model.event = value.value
+        }
+      }
     }
   }
 }

@@ -3,7 +3,7 @@ import { expect } from 'vitest'
 import { BindingTypes, sfcTransform } from '../src'
 import { assertCode } from './utils'
 
-describe('SFC sfcTransform', () => {
+describe('script transform', () => {
   test('data', () => {
     const { content, bindings } = sfcTransform(`
       <script>
@@ -276,5 +276,52 @@ describe('SFC sfcTransform', () => {
     `).script!
 
     expect(content).not.toMatch(`render(h) {`)
+  })
+
+  test('v-model', () => {
+    const { content } = sfcTransform(`
+    <script>
+      export default {
+        props: {
+          value: String,
+        },
+        mounted(){
+          this.value
+          this.$emit('input', 'foo')
+        }
+      }
+    </script>
+    `).script!
+
+    expect(content).not.toMatch(`value`)
+    expect(content).not.toMatch(`input`)
+    expect(content).toMatch(`modelValue`)
+    expect(content).toMatch(`update:modelValue`)
+  })
+
+  test('custom v-model', () => {
+    const { content } = sfcTransform(`
+    <script>
+      export default {
+        model: {
+          prop: 'title',
+          event: 'change'
+        },
+        props: {
+          value: String,
+          title: String,
+        },
+        mounted(){
+          this.title
+          this.$emit('change', 'foo')
+        }
+      }
+    </script>
+    `).script!
+
+    expect(content).not.toMatch(`title`)
+    expect(content).not.toMatch(`change`)
+    expect(content).toMatch(`modelValue`)
+    expect(content).toMatch(`update:modelValue`)
   })
 })

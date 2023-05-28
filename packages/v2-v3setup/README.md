@@ -5,7 +5,6 @@
 # 模板指令
 
 - v-model 指令在组件上的使用已经被重新设计，替换掉了 v-bind.sync x
-TODO: value  @input  -> modelValue @update:modelValue 
 - 在<template v-for> 和没有 v-for 的节点身上使用 key 发生了变化
 - v-if 和 v-for 在同一个元素身上使用时的优先级发生了变化
 - v-bind="object" 现在是顺序敏感的
