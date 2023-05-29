@@ -1,8 +1,30 @@
 import { type ExtensionContext, window, commands } from 'vscode'
 
 import { minimalEdit } from './utils'
-import { v2ToV3Setup } from '../../v2-v3setup'
+import { sfcTransform as v2ToV3Setup } from '../../v2-v3setup'
 import { reactivityTransform } from '../../reactivity-transform'
+
+function wrapTag(
+  src: string,
+  id: string,
+  fn: { (src: string, id: string): { content: string } }
+) {
+  if (!/\.vue|\.js|\.ts$/.test(id) || !src) return { content: '' }
+
+  let prefix = ''
+  let suffix = ''
+  if (!/\.vue/.test(id)) {
+    prefix = '<script setup'
+    suffix = '</script>'
+    if (/\.ts/.test(id)) prefix += ' lang="ts"'
+    prefix += '>'
+  }
+
+  const result = fn(src, id)
+  prefix && (result.content = result.content.replace(prefix, ''))
+  suffix && (result.content = result.content.replace(suffix, ''))
+  return result
+}
 
 export function activate(context: ExtensionContext) {
   const transform = (
@@ -17,7 +39,7 @@ export function activate(context: ExtensionContext) {
 
       const { fileName } = editor.document
 
-      const { content } = transformer(src, fileName)
+      const { content } = wrapTag(src, fileName, transformer)
       const edit = minimalEdit(document, content)
       await editor.edit(editBuilder => {
         editBuilder.replace(edit.range, edit.newText)

@@ -34,4 +34,11 @@ describe('css transform', () => {
     `)
     expect(styles![0]).toMatchSnapshot()
   })
+
+  it('should transform linked style', () => {
+    const { styles } = sfcTransform(`
+    <style lang="less" src="../styles/bar.less"></style>
+    `)
+    expect(styles![0]).toEqual(undefined)
+  })
 })

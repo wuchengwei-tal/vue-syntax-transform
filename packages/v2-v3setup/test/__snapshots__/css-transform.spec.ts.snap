@@ -13,6 +13,10 @@ exports[`css transform > should transform deep 1`] = `
 "
 `;
 
+exports[`css transform > should transform dimension 1`] = `undefined`;
+
+exports[`css transform > should transform linked style 1`] = `undefined`;
+
 exports[`css transform > should transform transition name 1`] = `
 "
 v-enter-from,

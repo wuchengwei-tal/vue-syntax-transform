@@ -12,23 +12,6 @@ import MagicString from 'magic-string'
 
 export * from './data'
 
-export function v2ToV3Setup(src: string, id: string) {
-  if (!/\.vue|\.js$/.test(id) || !src) return { content: '' }
-
-  let prefix = ''
-  let suffix = ''
-
-  if (!/\.vue/.test(id)) {
-    prefix = '<script>'
-    suffix = '</script>'
-    src = prefix + src + suffix
-  }
-  const result = sfcTransform(src, id)
-  prefix && (result.content = result.content.replace(prefix, ''))
-  suffix && (result.content = result.content.replace(suffix, ''))
-  return result
-}
-
 type TransformedSFC = {
   template?: ReturnType<typeof templateTransform>
   script?: ReturnType<typeof compileScript>
@@ -69,22 +52,26 @@ export function sfcTransform(sfc: string, id = '') {
 
   if (script) {
     const { start, end, content } = script
-    ret.script = compileScript(content, { id })
-    s.overwrite(start!, end!, ret.script.content)
-    let i = start!
-    while (source[i--] === '>');
-    while (source[--i] !== '<');
-    if (source.slice(i, i + 7) === '<script') {
-      s.prependRight(i + 7, ' setup')
+    if (content) {
+      ret.script = compileScript(content, { id })
+      s.overwrite(start!, end!, '\n' + ret.script.content + '\n')
+      let i = start!
+      while (source[i--] === '>');
+      while (source[--i] !== '<');
+      if (source.slice(i, i + 7) === '<script') {
+        s.prependRight(i + 7, ' setup')
+      }
     }
   }
 
   if (styles.length) {
     styles.forEach(style => {
       const { start, end, content } = style
-      const res = cssTransform(content)
-      ret.styles?.push(res)
-      s.overwrite(start!, end!, res)
+      if (content) {
+        const res = cssTransform(content)
+        ret.styles?.push(res)
+        s.overwrite(start!, end!, res)
+      }
     })
   }
 
