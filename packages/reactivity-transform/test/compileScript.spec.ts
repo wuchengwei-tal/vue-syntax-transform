@@ -71,7 +71,7 @@ const bar = 1
     })
 
     // should remove defineOptions import and call
-    // expect(content).not.toMatch('defineProps')
+    expect(content).not.toMatch('defineProps')
   })
 
   test('defineProps w/ external definition', () => {
@@ -107,7 +107,7 @@ const myEmit = defineEmits(['foo', 'bar'])
       myEmit: BindingTypes.SETUP_CONST
     })
     // should remove defineOptions import and call
-    // expect(content).not.toMatch('defineEmits')
+    expect(content).not.toMatch('defineEmits')
   })
 
   test('defineProps/defineEmits in multi-variable declaration', () => {
@@ -119,7 +119,7 @@ const myEmit = defineEmits(['foo', 'bar'])
     </script>
   `)
     assertCode(content)
-    // expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`const a = 1;`) // test correct removal
   })
 
   // #6757
@@ -132,7 +132,7 @@ const myEmit = defineEmits(['foo', 'bar'])
     </script>
   `)
     assertCode(content)
-    // expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`const a = 1;`) // test correct removal
   })
 
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
@@ -307,7 +307,7 @@ defineExpose({ foo: 123 })
         { reactivityTransform: true }
       )
       assertCode(content)
-      // expect(content).toMatch(`import { ref } from 'vue'`);
+      expect(content).toMatch(`import { ref } from 'vue'`);
     })
 
     test('import dedupe between <script> and <script setup>', () => {
@@ -697,35 +697,35 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // test("ssr codegen", () => {
-    //   const { content } = compile(
-    //     `
-    //     <script setup>
-    //     import { ref } from 'vue'
-    //     const count = ref(0)
-    //     </script>
-    //     <template>
-    //       <div>{{ count }}</div>
-    //       <div>static</div>
-    //     </template>
-    //     <style>
-    //     div { color: v-bind(count) }
-    //     </style>
-    //     `,
-    //     {
-    //       inlineTemplate: true,
-    //       templateOptions: {
-    //         ssr: true,
-    //       },
-    //     }
-    //   );
-    //   expect(content).toMatch(`\n  __ssrInlineRender: true,\n`);
-    //   expect(content).toMatch(`return (_ctx, _push`);
-    //   expect(content).toMatch(`ssrInterpolate`);
-    //   expect(content).not.toMatch(`useCssVars`);
-    //   expect(content).toMatch(`"--${mockId}-count": (count.value)`);
-    //   assertCode(content);
-    // });
+    test("ssr codegen", () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import { ref } from 'vue'
+        const count = ref(0)
+        </script>
+        <template>
+          <div>{{ count }}</div>
+          <div>static</div>
+        </template>
+        <style>
+        div { color: v-bind(count) }
+        </style>
+        `,
+        {
+          inlineTemplate: true,
+          templateOptions: {
+            ssr: true,
+          },
+        }
+      );
+      expect(content).toMatch(`\n  __ssrInlineRender: true,\n`);
+      expect(content).toMatch(`return (_ctx, _push`);
+      expect(content).toMatch(`ssrInterpolate`);
+      expect(content).not.toMatch(`useCssVars`);
+      expect(content).toMatch(`"--${mockId}-count": (count.value)`);
+      assertCode(content);
+    });
   })
 
   describe('with TypeScript', () => {
@@ -1182,9 +1182,9 @@ const emit = defineEmits(['a', 'b'])
         reactivityTransform: true
       })
       if (shouldAsync) {
-        // expect(content).toMatch(`let __temp, __restore`);
+        expect(content).toMatch(`let __temp, __restore`);
       }
-      // expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup(`);
+      expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup(`);
       expect(content).equal(code)
       assertCode(content);
       return content
@@ -1217,7 +1217,7 @@ const emit = defineEmits(['a', 'b'])
     // should prepend semicolon
     test('nested leading await in expression statement', () => {
       const code = assertAwaitDetection(`foo()\nawait 1 + await 2`)
-      // expect(code).toMatch(`foo()\n;(`)
+      expect(code).toMatch(`foo()\n;(`)
     })
 
     // #4596 should NOT prepend semicolon

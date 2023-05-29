@@ -21,7 +21,7 @@ describe('sfc props transform', () => {
       <template>{{ foo }}</template>
     `)
 
-    // expect(content).toMatch(`console.log(__props.foo)`)
+    expect(content).toMatch(`console.log(__props.foo)`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS
@@ -54,7 +54,7 @@ describe('sfc props transform', () => {
       </script>
     `)
     expect(content).toMatch(`console.log(foo)`)
-    // expect(content).toMatch(`console.log(__props.bar)`)
+    expect(content).toMatch(`console.log(__props.bar)`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
@@ -71,10 +71,10 @@ describe('sfc props transform', () => {
     `)
     // literals can be used as-is, non-literals are always returned from a
     // function
-    //     expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar'], {
-    //   foo: 1,
-    //   bar: () => ({})
-    // })`);
+    expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar'], {
+      foo: 1,
+      bar: () => ({})
+    })`)
     assertCode(content)
   })
 
@@ -98,14 +98,14 @@ describe('sfc props transform', () => {
     )
     // literals can be used as-is, non-literals are always returned from a
     // function
-    //     expect(content).toMatch(`props: {
-    //     foo: { default: 1 },
-    //     bar: { default: () => ({}) },
-    //     baz: null,
-    //     boola: { type: Boolean },
-    //     boolb: { type: [Boolean, Number] },
-    //     func: { type: Function, default: () => (() => {}) }
-    //   }`);
+    expect(content).toMatch(`props: {
+        foo: { default: 1 },
+        bar: { default: () => ({}) },
+        baz: null,
+        boola: { type: Boolean },
+        boolb: { type: [Boolean, Number] },
+        func: { type: Function, default: () => (() => {}) }
+      }`)
     assertCode(content)
   })
 
@@ -118,11 +118,11 @@ describe('sfc props transform', () => {
       </script>
       <template>{{ foo + bar }}</template>
     `)
-    // expect(content).not.toMatch(`const { foo: bar } =`)
+    expect(content).not.toMatch(`const { foo: bar } =`)
     expect(content).toMatch(`let x = foo`) // should not process
-    // expect(content).toMatch(`let y = __props.foo`)
+    expect(content).toMatch(`let y = __props.foo`)
     // should convert bar to __props.foo in template expressions
-    // expect(content).toMatch(`_toDisplayString(__props.foo + __props.foo)`);
+    expect(content).toMatch(`_toDisplayString(__props.foo + __props.foo)`);
     assertCode(content)
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_LET,
@@ -144,7 +144,7 @@ describe('sfc props transform', () => {
       </script>
       <template>{{ fooBar }}</template>
     `)
-    // expect(content).toMatch(`x = __props["foo.bar"]`)
+    expect(content).toMatch(`x = __props["foo.bar"]`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_LET,
@@ -162,9 +162,9 @@ describe('sfc props transform', () => {
       const { foo, bar, ...rest } = defineProps(['foo', 'bar', 'baz'])
       </script>
     `)
-    // expect(content).toMatch(
-    //   `const rest = _createPropsRestProxy(__props, ["foo","bar"])`
-    // );
+    expect(content).toMatch(
+      `const rest = _createPropsRestProxy(__props, ["foo","bar"])`
+    );
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
@@ -199,8 +199,8 @@ describe('sfc props transform', () => {
     <template>{{ foo }}</template>
   `)
     expect(content).not.toMatch(`const { foo } =`)
-    // expect(content).toMatch(`console.log(__props.foo)`)
-    // expect(content).toMatch(`_toDisplayString(__props.foo)`);
+    expect(content).toMatch(`console.log(__props.foo)`)
+    expect(content).toMatch(`_toDisplayString(__props.foo)`);
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS
