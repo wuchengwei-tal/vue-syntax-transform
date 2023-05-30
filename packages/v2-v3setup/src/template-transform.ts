@@ -65,9 +65,11 @@ export function templateTransform(template: Template): { content: string } {
 
     transDirective(node)
 
+    transIsAttr(node)
+
     removeKeyAttr(node)
 
-    transIsAttr(node)
+    transFilter(node)
   }
 
   function removeKeyAttr(node: ASTElement) {
@@ -157,6 +159,41 @@ export function templateTransform(template: Template): { content: string } {
         s.overwrite(start + offset, end + offset, value)
       }
     }
+  }
+
+  function transFilter(node: ASTElement) {
+    const isFilter = (exp: string) => /_f\(.+\)\(.+\)/.test(exp)
+
+    const trans = (v: string) => {
+      const matched = v.match(/_f\((.+)\)\((.+)\)/)
+      if (!matched) return ''
+      let [_, filter, arg] = matched
+      filter = filter.replace(/"/g, '')
+      arg = arg.replace(/\)/g, '')
+      return `${filter}(${arg})`
+    }
+
+    node?.children?.forEach(child => {
+      // @ts-ignore
+      const { type, start, end } = child
+      if (type === Expression && isFilter(child.expression)) {
+        const val = trans(child.expression)
+        if (val) s.overwrite(start + offset, end + offset, val)
+      }
+
+      // regexp to replace _f("currencyUSD")(accountBalance) to currencyUSD(accountBalance)
+    })
+
+    node.attrs?.forEach(attr => {
+      // @ts-ignore
+      const { name, value, start, end } = attr
+      if (isFilter(value)) {
+        const val = trans(value)
+        const original = s.original.slice(start + offset, end + offset)
+        const newValue = original.replace(node.attrsMap[':' + name], val)
+        if (val) s.overwrite(start + offset, end + offset, newValue)
+      }
+    })
   }
 
   walk(ast)

@@ -154,4 +154,19 @@ describe('Template Directives', () => {
     expect(content).not.toMatch('<tr')
     expect(content).toMatch('<component')
   })
+
+  test('remove filter', () => {
+    const { template } = sfcTransform(`
+    <template>
+      <div :attr="accountBalance | currencyUSD" >
+        <p>{{ accountBalance | currencyUSD }}</p>
+      </div>
+    </template>
+    `)
+
+    const { content } = template!
+    expect(content).not.toMatch('|')
+    expect(content).toMatch('<p>currencyUSD(accountBalance)</p>')
+    expect(content).toMatch(':attr="currencyUSD(accountBalance)"')
+  })
 })
