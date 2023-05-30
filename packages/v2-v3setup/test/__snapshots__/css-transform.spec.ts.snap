@@ -3,19 +3,15 @@
 exports[`css transform > should transform deep 1`] = `
 "
 :deep( .foo) {
-    width: 1rem;
+    width: 100px;
 
     :deep( .bar) {
-           height: 1rem;
+           height: 100px;
     }
 }
 
 "
 `;
-
-exports[`css transform > should transform dimension 1`] = `undefined`;
-
-exports[`css transform > should transform linked style 1`] = `undefined`;
 
 exports[`css transform > should transform transition name 1`] = `
 "

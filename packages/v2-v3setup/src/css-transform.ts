@@ -13,9 +13,9 @@ function _cssTransform(css: string, raw = '') {
   const ast = csstree.parse(css, { positions: true })
 
   function transDimension(node: Dimension) {
-    if (node.unit === 'px') {
+    if (node.unit === 'rem') {
       let { start, end } = node.loc!
-      const val = parseFloat(node.value) / RATIO + 'rem'
+      const val = parseFloat(node.value) * RATIO + 'px'
       s.overwrite(start.offset, end.offset, val)
     }
   }
