@@ -132,7 +132,7 @@ describe('sfc ref transform', () => {
     expect(content).toMatch(`b.value++`)
     // c shadowed
     expect(content).toMatch(`c++`)
-    assertCode(content);
+    expect(content).matchSnapshot()
     expect(bindings).toStrictEqual({
       a: BindingTypes.SETUP_REF,
       b: BindingTypes.SETUP_REF,

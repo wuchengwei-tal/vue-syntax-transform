@@ -44,3 +44,16 @@ exports[`sfc ref transform > usage with normal <script> (has macro usage) + <scr
       
       console.log(data.value)"
 `;
+
+exports[`sfc ref transform > usage with normal <script> + <script setup> 1`] = `
+"const a = ref(0)
+      const c = ref(0)
+      
+      const b = ref(0)
+      let c = 0
+      function change() {
+        a.value++
+        b.value++
+        c++
+      }"
+`;
