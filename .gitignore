@@ -3,6 +3,7 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+local
 
 packages/*/*.js
 packages/*/*.js.map

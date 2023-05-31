@@ -105,7 +105,7 @@ export function transformBindings(
       name in bindings ? key : arrowFunctionExpression([], key)
     ]
 
-    let arg2: ArrowFunctionExpression | undefined
+    let arg2: ArrowFunctionExpression | Identifier | undefined
     let arg3: ObjectExpression | undefined
 
     if (value.type === 'ObjectMethod') {
@@ -136,7 +136,7 @@ export function transformBindings(
     }
 
     if (value.type === 'StringLiteral') {
-      arg2 = arrowFunctionExpression([], stringLiteral(value.value))
+      arg2 = identifier(value.value)
     }
 
     arg2 && args.push(arg2)
@@ -377,11 +377,14 @@ export function transformBindings(
   }
 
   for (let [key, { type, value }] of Object.entries(bindings)) {
-    if (type === BindingTypes.DATA) output.unshift(transState(key, value))
+    if ([BindingTypes.METHOD, BindingTypes.FILTER].includes(type))
+      output.unshift(transMethod(key, value))
+  }
 
+  for (let [key, { type, value }] of Object.entries(bindings)) {
     if (type === BindingTypes.COMPUTED) output.unshift(transGetters(key, value))
 
-    if (type === BindingTypes.METHOD) output.unshift(transMethod(key, value))
+    if (type === BindingTypes.DATA) output.unshift(transState(key, value))
 
     if (type === BindingTypes.$) {
       if (key === 'emit') {

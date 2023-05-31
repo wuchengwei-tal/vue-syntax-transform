@@ -84,7 +84,7 @@ describe('script transform', () => {
         };
       },
       watch: {
-        firstName: 'firstName',
+        firstName: 'onFirstName',
         lastName: {
           handler(v1, v2){
             if(v1 !== v2) {
@@ -111,7 +111,7 @@ describe('script transform', () => {
       fullName: BindingTypes.DATA
     })
 
-    expect(content).toMatch('watch(firstName, () => "firstName")')
+    expect(content).toMatch('watch(firstName, onFirstName')
     expect(content).toMatch('watch(lastName, (v1, v2) => {')
     expect(content).toMatch('watch(fullName, (v1, v2) => {')
     expect(content).toMatch('watch(() => fullName.a, (v1, v2)')
@@ -323,5 +323,24 @@ describe('script transform', () => {
     expect(content).not.toMatch(`change`)
     expect(content).toMatch(`modelValue`)
     expect(content).toMatch(`update:modelValue`)
+  })
+
+  test('filter', () => {
+    const { content, bindings } = sfcTransform(`
+<script>
+  export default {
+    filters: {
+      currencyUSD(value) {
+        return '$' + value
+      }
+    }
+  }
+</script>
+    `).script!
+
+    expect(bindings).toStrictEqual({
+      currencyUSD: BindingTypes.FILTER
+    })
+    expect(content).toMatch(`function currencyUSD`)
   })
 })
