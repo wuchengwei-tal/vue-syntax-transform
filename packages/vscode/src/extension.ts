@@ -9,20 +9,29 @@ function wrapTag(
   id: string,
   fn: { (src: string, id: string): { content: string } }
 ) {
-  if (!/\.vue|\.js|\.ts$/.test(id) || !src) return { content: '' }
+  if (!/\.vue|\.js|\.ts$/.test(id)) {
+    window.showWarningMessage('Only support [vue|js|ts] file!')
+    return { content: '' }
+  }
+  if (!src) return { content: '' }
 
   let prefix = ''
-  let suffix = ''
   if (!/\.vue/.test(id)) {
-    prefix = '<script setup'
-    suffix = '</script>'
+    prefix = '<script'
     if (/\.ts/.test(id)) prefix += ' lang="ts"'
     prefix += '>'
+    src = prefix + src + '</script>'
   }
 
   const result = fn(src, id)
-  prefix && (result.content = result.content.replace(prefix, ''))
-  suffix && (result.content = result.content.replace(suffix, ''))
+  if (prefix) {
+    //  remove <script> tag
+    result.content = result.content.replace(
+      /^<script[^>]*>([\s\S]*)<\/script>$/,
+      '$1'
+    )
+  }
+
   return result
 }
 
