@@ -113,3 +113,5 @@ export type BindingMetadata = {
   __isScriptSetup?: boolean
   __propsAliases?: Record<string, string>
 }
+
+export type BindingMap<T> = Record<string, { type: BindingTypes; value: T }>

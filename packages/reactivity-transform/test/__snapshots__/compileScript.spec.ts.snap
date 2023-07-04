@@ -85,88 +85,6 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > spa
         x()"
 `;
 
-exports[`SFC compile <script setup> > async/await detection > expression statement 1`] = `"await foo"`;
-
-exports[`SFC compile <script setup> > async/await detection > multiple \`if for\` nested statements 1`] = `
-"if (ok) {
-        for (let a of [1,2,3]) {
-          await a
-        }
-        for (let a of [1,2,3]) {
-          await a
-          await a
-        }
-      }"
-`;
-
-exports[`SFC compile <script setup> > async/await detection > multiple \`if while\` nested statements 1`] = `
-"if (ok) {
-        while (d) {
-          await 5
-        }
-        while (d) {
-          await 5
-          await 6
-          if (c) {
-            let f = 10
-            10 + await 7
-          } else {
-            await 8
-            await 9
-          }
-        }
-      }"
-`;
-
-exports[`SFC compile <script setup> > async/await detection > multiple \`if\` nested statements 1`] = `
-"if (ok) {
-        let a = 'foo'
-        await 0 + await 1
-        await 2
-      } else if (a) {
-        await 10
-        if (b) {
-          await 0 + await 1
-        } else {
-          let a = 'foo'
-          await 2
-        }
-        if (b) {
-          await 3
-          await 4
-        }
-      } else {
-        await 5
-      }"
-`;
-
-exports[`SFC compile <script setup> > async/await detection > nested await 1`] = `"await (await foo)"`;
-
-exports[`SFC compile <script setup> > async/await detection > nested await 2`] = `"await ((await foo))"`;
-
-exports[`SFC compile <script setup> > async/await detection > nested await 3`] = `"await (await (await foo))"`;
-
-exports[`SFC compile <script setup> > async/await detection > nested leading await in expression statement 1`] = `
-"foo()
-await 1 + await 2"
-`;
-
-exports[`SFC compile <script setup> > async/await detection > nested statements 1`] = `"if (ok) { await foo } else { await bar }"`;
-
-exports[`SFC compile <script setup> > async/await detection > ref 1`] = `"let a = ref(1 + (await foo))"`;
-
-exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 1`] = `"async function foo() { await bar }"`;
-
-exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 2`] = `"const foo = async () => { await bar }"`;
-
-exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 3`] = `"const obj = { async method() { await bar }}"`;
-
-exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 4`] = `"const cls = class Foo { async method() { await bar }}"`;
-
-exports[`SFC compile <script setup> > async/await detection > single line conditions 1`] = `"if (false) await foo()"`;
-
-exports[`SFC compile <script setup> > async/await detection > variable 1`] = `"const a = 1 + (await foo)"`;
-
 exports[`SFC compile <script setup> > binding analysis for destructure 1`] = `"const { foo, b: bar, ['x' + 'y']: baz, x: { y, zz: { z }}} = {}"`;
 
 exports[`SFC compile <script setup> > defineEmits() 1`] = `"const myEmit = defineEmits(['foo', 'bar'])"`;
@@ -189,23 +107,6 @@ exports[`SFC compile <script setup> > defineProps() 1`] = `
   foo: String
 })
 const bar = 1"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
-"const props = defineProps(['item']),
-          emit = defineEmits(['a']);"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration 1`] = `
-"const props = defineProps(['item']),
-      a = 1,
-      emit = defineEmits(['a']);"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration fix #6757  1`] = `
-"const a = 1,
-          props = defineProps(['item']),
-          emit = defineEmits(['a']);"
 `;
 
 exports[`SFC compile <script setup> > dev mode import usage check > TS annotations 1`] = `

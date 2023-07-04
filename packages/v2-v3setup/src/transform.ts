@@ -32,9 +32,9 @@ import {
 import { walk } from 'estree-walker'
 import { capitalize } from '@vue/shared'
 
-import { BindingTypes } from '@vue-transform/shared'
+import { BindingTypes, BindingMap } from '@vue-transform/shared'
 
-import { BindingMap, LifeCircleHookMap, RenderFunction, VModel } from './data'
+import { LifeCircleHookMap, RenderFunction, VModel } from './data'
 
 const generate = require('@babel/generator').default
 

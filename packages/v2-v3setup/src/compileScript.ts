@@ -20,8 +20,8 @@ import MagicString from 'magic-string'
 
 import { generateCodeFrame } from '@vue/shared'
 
-import { BindingTypes } from '@vue-transform/shared'
-import { BindingMap, RenderFunction, VModel } from './data'
+import { BindingMap, BindingTypes } from '@vue-transform/shared'
+import { RenderFunction, VModel } from './data'
 import { transformBindings, registerBinding } from './transform'
 
 export function compileScript(

@@ -1,7 +1,3 @@
-import { BindingTypes } from '@vue-transform/shared'
-
-export type BindingMap<T> = Record<string, { type: BindingTypes; value: T }>
-
 export const LifeCircleHookMap = {
   beforeMount: 'onBeforeMount',
   mounted: 'onMounted',
