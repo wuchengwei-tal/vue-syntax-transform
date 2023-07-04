@@ -1,0 +1,7 @@
+{
+  "name": "@vue-transform/class-decorator-v3setup",
+  "version": "0.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "dependencies": {}
+}

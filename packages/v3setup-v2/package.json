@@ -1,0 +1,17 @@
+{
+  "name": "@vue-transform/v3setup-v2",
+  "version": "0.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.3.4",
+    "@vue/compiler-dom": "^3.3.4",
+    "@vue/compiler-core": "^3.3.4"
+  },
+  "devDependencies": {
+    "minimatch": "^9.0.0",
+    "@types/hash-sum": "^1.0.0",
+    "postcss-selector-parser": "^6.0.4",
+    "hash-sum": "^2.0.0"
+  }
+}

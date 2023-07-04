@@ -1,5 +1,3 @@
-export * from './data'
-
 export { compileScript } from './compileScript'
 
 import { compileScript } from './compileScript'

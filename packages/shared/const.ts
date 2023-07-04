@@ -1,9 +1,10 @@
-export enum ConstantTypes {
-  NOT_CONSTANT = 0,
-  CAN_SKIP_PATCH = 1,
-  CAN_HOIST = 2,
-  CAN_STRINGIFY = 3
-}
+export const TS_NODE_TYPES = [
+  'TSAsExpression', // foo as number
+  'TSTypeAssertion', // (<number>foo)
+  'TSNonNullExpression', // foo!
+  'TSInstantiationExpression', // foo<string>
+  'TSSatisfiesExpression' // foo satisfies T
+]
 
 export enum BindingTypes {
   /**
@@ -44,7 +45,29 @@ export enum BindingTypes {
   /**
    * declared by other options, e.g. computed, inject
    */
-  OPTIONS = 'options'
+  OPTIONS = 'options',
+
+  /**
+   * a literal constant, e.g. 'foo', 1, true
+   */
+  LITERAL_CONST = 'literal-const',
+
+  //  custom
+  LET = 'let',
+
+  CONST = 'const',
+
+  COMPUTED = 'computed',
+
+  FILTER = 'filter',
+
+  METHOD = 'method',
+
+  WATCH = 'watch',
+
+  HOOK = 'hook',
+
+  $ = '$'
 }
 
 export enum NodeTypes {
@@ -77,48 +100,16 @@ export enum NodeTypes {
   JS_RETURN_STATEMENT = 26
 }
 
-// NodeTypes
-export const ROOT = 0
-export const ELEMENT = 1
-export const TEXT = 2
-export const COMMENT = 3
-export const SIMPLE_EXPRESSION = 4
-export const INTERPOLATION = 5
-export const ATTRIBUTE = 6
-export const DIRECTIVE = 7
-export const COMPOUND_EXPRESSION = 8
-export const IF = 9
-export const IF_BRANCH = 10
-export const FOR = 11
-export const TEXT_CALL = 12
-export const VNODE_CALL = 13
-export const JS_CALL_EXPRESSION = 14
-export const JS_OBJECT_EXPRESSION = 15
-export const JS_PROPERTY = 16
-export const JS_ARRAY_EXPRESSION = 17
-export const JS_FUNCTION_EXPRESSION = 18
-export const JS_CONDITIONAL_EXPRESSION = 19
-export const JS_CACHE_EXPRESSION = 20
-export const JS_BLOCK_STATEMENT = 21
-export const JS_TEMPLATE_LITERAL = 22
-export const JS_IF_STATEMENT = 23
-export const JS_ASSIGNMENT_EXPRESSION = 24
-export const JS_SEQUENCE_EXPRESSION = 25
-export const JS_RETURN_STATEMENT = 26
+export enum ConstantTypes {
+  NOT_CONSTANT = 0,
+  CAN_SKIP_PATCH = 1,
+  CAN_HOIST = 2,
+  CAN_STRINGIFY = 3
+}
 
-// ConstantTypes
-export const NOT_CONSTANT = 0
-export const CAN_SKIP_PATCH = 1
-export const CAN_HOIST = 2
-export const CAN_STRINGIFY = 3
-
-// BindingTypes
-export const DATA = 'data'
-export const PROPS = 'props'
-export const PROPS_ALIASED = 'props-aliased'
-export const SETUP_LET = 'setup-let'
-export const SETUP_CONST = 'setup-const'
-export const SETUP_REACTIVE_CONST = 'setup-reactive-const'
-export const SETUP_MAYBE_REF = 'setup-maybe-ref'
-export const SETUP_REF = 'setup-ref'
-export const OPTIONS = 'options'
+export type BindingMetadata = {
+  [key: string]: string | undefined
+} & {
+  __isScriptSetup?: boolean
+  __propsAliases?: Record<string, string>
+}

@@ -7,7 +7,11 @@
         "compile": "tsup",
         "watch": "tsup --watch src"
     },
-    "dependencies": {},
+    "dependencies": {
+        "@vue/compiler-core": "^3.2.47",
+        "@vue/compiler-dom": "^3.2.47",
+        "@vue/compiler-sfc": "^3.2.47"
+    },
     "devDependencies": {
         "@vue/consolidate": "^0.17.3",
         "@types/estree": "^0.0.48",

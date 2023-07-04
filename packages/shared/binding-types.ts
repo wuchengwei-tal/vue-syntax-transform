@@ -1,0 +1,11 @@
+// BindingTypes
+export const DATA = 'data'
+export const PROPS = 'props'
+export const PROPS_ALIASED = 'props-aliased'
+export const SETUP_LET = 'setup-let'
+export const SETUP_CONST = 'setup-const'
+export const SETUP_REACTIVE_CONST = 'setup-reactive-const'
+export const SETUP_MAYBE_REF = 'setup-maybe-ref'
+export const SETUP_REF = 'setup-ref'
+export const OPTIONS = 'options'
+export const LITERAL_CONST = 'literal-const'

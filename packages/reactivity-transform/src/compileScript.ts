@@ -1,3 +1,6 @@
+import * as NodeTypes from '@vue-transform/shared/node-types'
+import * as BindingTypes from '@vue-transform/shared/binding-types'
+
 import MagicString from 'magic-string'
 import {
   createRoot,
@@ -6,7 +9,6 @@ import {
   SimpleExpressionNode,
   walkIdentifiers
 } from '@vue/compiler-dom'
-import * as DATA from './data'
 import { SFCDescriptor, SFCTemplateCompileOptions } from '@vue/compiler-sfc'
 import {
   parse as _parse,
@@ -39,19 +41,15 @@ import {
 } from '@babel/types'
 import { RawSourceMap } from 'source-map'
 
-import { warnOnce } from './warn'
+import {
+  warnOnce,
+  DEFINE_PROPS,
+  DEFINE_EMITS,
+  DEFINE_EXPOSE,
+  WITH_DEFAULTS,
+  BindingMetadata
+} from '@vue-transform/shared'
 import { shouldTransform, transformAST } from './reactivityTransform'
-
-export const DEFAULT_FILENAME = 'anonymous.vue'
-
-// Special compiler macros
-const DEFINE_PROPS = 'defineProps'
-const DEFINE_EMITS = 'defineEmits'
-const DEFINE_EXPOSE = 'defineExpose'
-const WITH_DEFAULTS = 'withDefaults'
-
-// constants
-const DEFAULT_VAR = `__default__`
 
 const isBuiltInDir = makeMap(
   `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
@@ -129,12 +127,12 @@ type EmitsDeclType = FromNormalScript<
   TSFunctionType | TSTypeLiteral | TSInterfaceBody
 >
 
-type BindingMetadata = {
-  [key: string]: string | undefined
-} & {
-  __isScriptSetup?: boolean
-  __propsAliases?: Record<string, string>
-}
+// type BindingMetadata = {
+//   [key: string]: string | undefined
+// } & {
+//   __isScriptSetup?: boolean
+//   __propsAliases?: Record<string, string>
+// }
 
 /**
  * Compile `<script setup>`
@@ -738,7 +736,7 @@ export function compileScript(
     startOffset
   )
 
-  // 1.1 walk import delcarations of <script>
+  // 1.1 walk import declarations of <script>
   if (scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
@@ -1003,7 +1001,7 @@ export function compileScript(
     if (isTS) {
       // runtime enum
       if (node.type === 'TSEnumDeclaration') {
-        registerBinding(setupBindings, node.id, DATA.SETUP_CONST)
+        registerBinding(setupBindings, node.id, BindingTypes.SETUP_CONST)
       }
 
       // move all Type declarations to outer scope
@@ -1080,21 +1078,22 @@ export function compileScript(
   }
   if (propsRuntimeDecl) {
     for (const key of getObjectOrArrayExpressionKeys(propsRuntimeDecl)) {
-      bindingMetadata[key] = DATA.PROPS
+      bindingMetadata[key] = BindingTypes.PROPS
     }
   }
   for (const key in typeDeclaredProps) {
-    bindingMetadata[key] = DATA.PROPS
+    bindingMetadata[key] = BindingTypes.PROPS
   }
   // props aliases
   if (propsDestructureDecl) {
     if (propsDestructureRestId) {
-      bindingMetadata[propsDestructureRestId] = DATA.SETUP_REACTIVE_CONST
+      bindingMetadata[propsDestructureRestId] =
+        BindingTypes.SETUP_REACTIVE_CONST
     }
     for (const key in propsDestructuredBindings) {
       const { local } = propsDestructuredBindings[key]
       if (local !== key) {
-        bindingMetadata[local] = DATA.PROPS_ALIASED
+        bindingMetadata[local] = BindingTypes.PROPS_ALIASED
         ;(bindingMetadata.__propsAliases ||
           (bindingMetadata.__propsAliases = {}))[local] = key
       }
@@ -1108,8 +1107,8 @@ export function compileScript(
       imported === '*' ||
       (imported === 'default' && source.endsWith('.vue')) ||
       source === 'vue'
-        ? DATA.SETUP_CONST
-        : DATA.SETUP_MAYBE_REF
+        ? BindingTypes.SETUP_CONST
+        : BindingTypes.SETUP_MAYBE_REF
   }
   for (const key in scriptBindings) {
     bindingMetadata[key] = scriptBindings[key]
@@ -1120,7 +1119,7 @@ export function compileScript(
   // known ref bindings
   if (refBindings) {
     for (const key of refBindings) {
-      bindingMetadata[key] = DATA.SETUP_REF
+      bindingMetadata[key] = BindingTypes.SETUP_REF
     }
   }
 
@@ -1178,7 +1177,9 @@ function walkDeclaration(
         const userReactiveBinding = userImportAliases['reactive']
         if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
-          bindingType = isConst ? DATA.SETUP_REACTIVE_CONST : DATA.SETUP_LET
+          bindingType = isConst
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_LET
         } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
@@ -1186,16 +1187,16 @@ function walkDeclaration(
           (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
           bindingType = isCallOf(init, DEFINE_PROPS)
-            ? DATA.SETUP_REACTIVE_CONST
-            : DATA.SETUP_CONST
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (isCallOf(init, userImportAliases['ref'])) {
-            bindingType = DATA.SETUP_REF
+            bindingType = BindingTypes.SETUP_REF
           } else {
-            bindingType = DATA.SETUP_MAYBE_REF
+            bindingType = BindingTypes.SETUP_MAYBE_REF
           }
         } else {
-          bindingType = DATA.SETUP_LET
+          bindingType = BindingTypes.SETUP_LET
         }
         registerBinding(bindings, id, bindingType)
       } else {
@@ -1216,7 +1217,7 @@ function walkDeclaration(
   ) {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
-    bindings[node.id!.name] = DATA.SETUP_CONST
+    bindings[node.id!.name] = BindingTypes.SETUP_CONST
   }
 }
 
@@ -1231,10 +1232,10 @@ function walkObjectPattern(
       if (p.key.type === 'Identifier' && p.key === p.value) {
         // shorthand: const { x } = ...
         const type = isDefineCall
-          ? DATA.SETUP_CONST
+          ? BindingTypes.SETUP_CONST
           : isConst
-          ? DATA.SETUP_MAYBE_REF
-          : DATA.SETUP_LET
+          ? BindingTypes.SETUP_MAYBE_REF
+          : BindingTypes.SETUP_LET
         registerBinding(bindings, p.key, type)
       } else {
         walkPattern(p.value, bindings, isConst, isDefineCall)
@@ -1242,7 +1243,7 @@ function walkObjectPattern(
     } else {
       // ...rest
       // argument can only be identifier when destructuring
-      const type = isConst ? DATA.SETUP_CONST : DATA.SETUP_LET
+      const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
       registerBinding(bindings, p.argument as Identifier, type)
     }
   }
@@ -1267,14 +1268,14 @@ function walkPattern(
 ) {
   if (node.type === 'Identifier') {
     const type = isDefineCall
-      ? DATA.SETUP_CONST
+      ? BindingTypes.SETUP_CONST
       : isConst
-      ? DATA.SETUP_MAYBE_REF
-      : DATA.SETUP_LET
+      ? BindingTypes.SETUP_MAYBE_REF
+      : BindingTypes.SETUP_LET
     registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
     // argument can only be identifier when destructuring
-    const type = isConst ? DATA.SETUP_CONST : DATA.SETUP_LET
+    const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
     registerBinding(bindings, node.argument as Identifier, type)
   } else if (node.type === 'ObjectPattern') {
     walkObjectPattern(node, bindings, isConst)
@@ -1283,10 +1284,10 @@ function walkPattern(
   } else if (node.type === 'AssignmentPattern') {
     if (node.left.type === 'Identifier') {
       const type = isDefineCall
-        ? DATA.SETUP_CONST
+        ? BindingTypes.SETUP_CONST
         : isConst
-        ? DATA.SETUP_MAYBE_REF
-        : DATA.SETUP_LET
+        ? BindingTypes.SETUP_MAYBE_REF
+        : BindingTypes.SETUP_LET
       registerBinding(bindings, node.left, type)
     } else {
       walkPattern(node.left, bindings, isConst)
@@ -1566,7 +1567,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
         // props: ['foo']
         // props: { foo: ... }
         for (const key of getObjectOrArrayExpressionKeys(property.value)) {
-          bindings[key] = DATA.PROPS
+          bindings[key] = BindingTypes.PROPS
         }
       }
 
@@ -1575,7 +1576,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
         // inject: ['foo']
         // inject: { foo: {} }
         for (const key of getObjectOrArrayExpressionKeys(property.value)) {
-          bindings[key] = DATA.OPTIONS
+          bindings[key] = BindingTypes.OPTIONS
         }
       }
 
@@ -1587,7 +1588,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
         // methods: { foo() {} }
         // computed: { foo() {} }
         for (const key of getObjectExpressionKeys(property.value)) {
-          bindings[key] = DATA.OPTIONS
+          bindings[key] = BindingTypes.OPTIONS
         }
       }
     }
@@ -1611,7 +1612,9 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
         ) {
           for (const key of getObjectExpressionKeys(bodyItem.argument)) {
             bindings[key] =
-              property.key.name === 'setup' ? DATA.SETUP_MAYBE_REF : DATA.DATA
+              property.key.name === 'setup'
+                ? BindingTypes.SETUP_MAYBE_REF
+                : BindingTypes.DATA
           }
         }
       }
@@ -1664,7 +1667,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   transform(createRoot([ast]), {
     nodeTransforms: [
       node => {
-        if (node.type === DATA.ELEMENT) {
+        if (node.type === NodeTypes.ELEMENT) {
           if (
             !parserOptions.isNativeTag!(node.tag) &&
             !parserOptions.isBuiltInComponent!(node.tag)
@@ -1673,7 +1676,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
           }
           for (let i = 0; i < node.props.length; i++) {
             const prop = node.props[i]
-            if (prop.type === DATA.DIRECTIVE) {
+            if (prop.type === NodeTypes.DIRECTIVE) {
               if (!isBuiltInDir(prop.name)) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
@@ -1685,7 +1688,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               }
             }
           }
-        } else if (node.type === DATA.INTERPOLATION) {
+        } else if (node.type === NodeTypes.INTERPOLATION) {
           code += `,${processExp(
             (node.content as SimpleExpressionNode).content
           )}`

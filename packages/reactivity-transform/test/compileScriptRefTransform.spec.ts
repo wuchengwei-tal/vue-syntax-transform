@@ -1,7 +1,6 @@
-import { expect } from 'vitest'
+import { assertCode, BindingTypes } from '@vue-transform/shared'
 
-import { BindingTypes, reactivityTransform } from '../src'
-import { compileSFCScript as compile, assertCode } from './utils'
+import { compileSFCScript as compile } from './utils'
 
 // this file only tests integration with SFC - main test case for the ref
 // transform can be found in <root>/packages/reactivity-transform/__tests__

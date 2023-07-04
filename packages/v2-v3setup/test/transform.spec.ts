@@ -5,7 +5,6 @@ import {
   OptionalMemberExpression,
   program
 } from '@babel/types'
-import { expect } from 'vitest'
 
 import { restoreMember } from '../src/transform'
 

@@ -1,9 +1,8 @@
 {
-  "name": "@vue-transform/v2-v3setup",
+  "name": "@vue-transform/setup",
   "version": "0.0.0",
   "description": "",
   "main": "src/index.ts",
   "dependencies": {
-    "vue-template-compiler": "^2.7.14"
   }
 }

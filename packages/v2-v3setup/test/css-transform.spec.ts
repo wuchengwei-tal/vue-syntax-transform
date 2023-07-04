@@ -1,4 +1,3 @@
-import { expect } from 'vitest'
 import { sfcTransform } from '../src'
 
 describe('css transform', () => {

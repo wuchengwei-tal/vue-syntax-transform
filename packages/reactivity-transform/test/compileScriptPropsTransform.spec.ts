@@ -1,7 +1,7 @@
-import { expect } from 'vitest'
+import { assertCode, BindingTypes } from '@vue-transform/shared'
 
-import { BindingTypes, SFCScriptCompileOptions } from '../src'
-import { compileSFCScript, assertCode } from './utils'
+import { SFCScriptCompileOptions } from '../src'
+import { compileSFCScript } from './utils'
 
 describe('sfc props transform', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {

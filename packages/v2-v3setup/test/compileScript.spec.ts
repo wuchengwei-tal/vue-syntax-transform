@@ -1,7 +1,7 @@
-import { expect } from 'vitest'
+import { assertCode } from '@vue-transform/shared'
 
-import { BindingTypes, sfcTransform } from '../src'
-import { assertCode } from './utils'
+import { BindingTypes } from '@vue-transform/shared'
+import { sfcTransform } from '../src'
 
 describe('script transform', () => {
   test('data', () => {

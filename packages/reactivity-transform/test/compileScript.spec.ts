@@ -1,6 +1,6 @@
-import { expect } from 'vitest'
-import { BindingTypes } from '../src'
-import { compileSFCScript as compile, assertCode, mockId } from './utils'
+import { BindingTypes } from '@vue-transform/shared'
+import { assertCode } from '@vue-transform/shared'
+import { compileSFCScript as compile } from './utils'
 
 describe('SFC compile <script setup>', () => {
   test('should expose top level declarations', () => {

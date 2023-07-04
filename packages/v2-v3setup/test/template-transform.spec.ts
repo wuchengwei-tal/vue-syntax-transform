@@ -1,4 +1,3 @@
-import { expect } from 'vitest'
 import { sfcTransform } from '../src'
 import { Comment } from '../src/data'
 

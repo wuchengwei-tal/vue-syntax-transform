@@ -15,6 +15,7 @@
 		"skipLibCheck": true,
 		"types": [
 			"node",
+			"vitest/globals",
 			// 
 		  ],
 		"strict": true   /* enable all strict type-checking options */
