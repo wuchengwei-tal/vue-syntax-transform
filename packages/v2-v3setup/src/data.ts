@@ -1,18 +1,3 @@
-export const LifeCircleHookMap = {
-  beforeMount: 'onBeforeMount',
-  mounted: 'onMounted',
-  beforeUpdate: 'onBeforeUpdate',
-  updated: 'onUpdated',
-  activated: 'onActivated',
-  deactivated: 'onDeactivated',
-  beforeDestroy: 'onBeforeUnmount',
-  destroyed: 'onUnmounted',
-  beforeRouteEnter: 'onBeforeRouteUpdate',
-  beforeRouteLeave: 'onBeforeRouteLeave',
-  beforeCreate: '',
-  created: ''
-}
-
 export const RenderFunction = 'RenderFunction'
 
 export const Comment = {

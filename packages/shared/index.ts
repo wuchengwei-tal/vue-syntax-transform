@@ -2,6 +2,7 @@ export * from './warn'
 export * from './test-utils'
 export * from './cache'
 export * from './const'
+export * from './transform'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 

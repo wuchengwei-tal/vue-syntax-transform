@@ -1,15 +1,18 @@
+import { BindingTypes } from '@vue-transform/shared'
 import { transform } from '../src/transform'
 
 describe('script transform', () => {
   test('ref', () => {
-    const { content } = transform(`
+    const { content, transBindings } = transform(`
 <script lang="ts" setup>
 const nickname = ref('nickname');
 const avatar = ref(img);
 const visible = ref(false);
+const data = reactive({a:1})
+let a = reactive({a:1})
+let b = 1
 </script>
 `)
-
     expect(content).toMatchInlineSnapshot(`
       "export default {
         setup() {
@@ -17,8 +20,17 @@ const visible = ref(false);
       const nickname = ref('nickname');
       const avatar = ref(img);
       const visible = ref(false);
+      const data = reactive({a:1})
+      let a = reactive({a:1})
+      let b = 1
       }"
     `)
+
+    if (!transBindings) return
+    expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
+    expect(transBindings['avatar']?.type).toEqual(BindingTypes.DATA)
+    expect(transBindings['visible']?.type).toEqual(BindingTypes.DATA)
+    expect(transBindings['data']?.type).toEqual(BindingTypes.DATA)
   })
 
   test('macros', () => {
@@ -42,7 +54,6 @@ defineOptions({
         props: {
           a: { type: Number, required: false }
         },
-        emits: ['change'],
         setup() {
 
 
@@ -51,6 +62,12 @@ defineOptions({
 
       }"
     `)
+
+    expect(content).not.toMatch('defineEmits')
+    expect(content).not.toMatch('defineProps')
+    expect(content).not.toMatch('defineExpose')
+    expect(content).not.toMatch('defineOptions')
+    expect(content).not.toMatch('expose')
   })
 
   test('imports', () => {
@@ -74,7 +91,7 @@ import { Checkbox } from 'ant-design-vue';
   })
 
   test('computed', () => {
-    const { content } = transform(`
+    const { content, transBindings } = transform(`
 <script lang="ts" setup>
 const nickname = ref('nickname');
 const name = computed(() => nickname.value);
@@ -90,9 +107,14 @@ const age = computed(() => 18);
       const age = computed(() => 18);
       }"
     `)
+
+    if (!transBindings) return
+    expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
+    expect(transBindings['name']?.type).toEqual(BindingTypes.COMPUTED)
+    expect(transBindings['age']?.type).toEqual(BindingTypes.COMPUTED)
   })
   test('methods', () => {
-    const { content } = transform(`
+    const { content, transBindings } = transform(`
 <script lang="ts" setup>
 const nickname = ref('nickname');
 const name = computed(() => nickname.value);
@@ -124,21 +146,40 @@ const changeAge = () => {
       }
       }"
     `)
+
+    if (!transBindings) return
+    expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
+    expect(transBindings['name']?.type).toEqual(BindingTypes.COMPUTED)
+    expect(transBindings['age']?.type).toEqual(BindingTypes.COMPUTED)
+    expect(transBindings['changeName']?.type).toEqual(BindingTypes.METHOD)
+    expect(transBindings['changeAge']?.type).toEqual(BindingTypes.METHOD)
   })
+
   test('watch', () => {
-    const { content } = transform(`
+    const { content, transBindings } = transform(`
 <script lang="ts" setup>
 const nickname = ref('nickname');
+const info = reactive({a:1})
 const name = computed(() => nickname.value);
-const age = computed(() => 18);
+const age = computed(() => info.a);
 
-watch(a, () => {
+watch(nickname, () => {
   console.log('a changed')
-  a.value++
-})
+  info.a++
+}, { immediate: true, deep: true })
+
+watch(() => info.a, () => {
+  console.log('a changed')
+  info.a++
+}, { immediate: true, deep: true })
+
+watch(() => age, () => {
+  console.log('a changed')
+  info.a++
+}, { immediate: true, deep: true })
 
 watchEffect(()=> {
-  a.value++
+  info.a++
   console.log('a changed')
 })
 </script>
@@ -148,20 +189,41 @@ watchEffect(()=> {
         setup() {
 
       const nickname = ref('nickname');
+      const info = reactive({a:1})
       const name = computed(() => nickname.value);
-      const age = computed(() => 18);
+      const age = computed(() => info.a);
 
-      watch(a, () => {
+      watch(nickname, () => {
         console.log('a changed')
-        a.value++
-      })
+        info.a++
+      }, { immediate: true, deep: true })
+
+      watch(() => info.a, () => {
+        console.log('a changed')
+        info.a++
+      }, { immediate: true, deep: true })
+
+      watch(() => age, () => {
+        console.log('a changed')
+        info.a++
+      }, { immediate: true, deep: true })
 
       watchEffect(()=> {
-        a.value++
+        info.a++
         console.log('a changed')
       })
       }"
     `)
+
+    if (!transBindings) return
+    expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
+    expect(transBindings['info']?.type).toEqual(BindingTypes.DATA)
+    expect(transBindings['name']?.type).toEqual(BindingTypes.COMPUTED)
+    expect(transBindings['age']?.type).toEqual(BindingTypes.COMPUTED)
+    expect(transBindings['watch']['nickname']?.type).toEqual(BindingTypes.WATCH)
+    expect(transBindings['watch']['age']?.type).toEqual(BindingTypes.WATCH)
+    expect(transBindings['watch']['info.a']?.type).toEqual(BindingTypes.WATCH)
+    // expect(transBindings['watchEffect']?.type).toEqual(BindingTypes.WATCH)
   })
   test('life cycles', () => {
     const { content } = transform(`
@@ -212,8 +274,8 @@ div{
         setup() {
 
       _useCssVars(_ctx => ({
-        \\"-a\\": (_unref(a)),
-        \\"-b\\": (_unref(b))
+        \\"-a\\": (a.value),
+        \\"-b\\": (b.value)
       }))
 
       const a = ref('1px')

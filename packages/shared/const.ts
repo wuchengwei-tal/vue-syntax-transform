@@ -115,3 +115,18 @@ export type BindingMetadata = {
 }
 
 export type BindingMap<T> = Record<string, { type: BindingTypes; value: T }>
+
+export const LifeCircleHookMap = {
+  beforeMount: 'onBeforeMount',
+  mounted: 'onMounted',
+  beforeUpdate: 'onBeforeUpdate',
+  updated: 'onUpdated',
+  activated: 'onActivated',
+  deactivated: 'onDeactivated',
+  beforeDestroy: 'onBeforeUnmount',
+  destroyed: 'onUnmounted',
+  beforeRouteEnter: 'onBeforeRouteUpdate',
+  beforeRouteLeave: 'onBeforeRouteLeave',
+  beforeCreate: '',
+  created: ''
+}

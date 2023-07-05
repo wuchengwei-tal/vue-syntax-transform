@@ -32,9 +32,14 @@ import {
 import { walk } from 'estree-walker'
 import { capitalize } from '@vue/shared'
 
-import { BindingTypes, BindingMap } from '@vue-transform/shared'
+import {
+  BindingTypes,
+  BindingMap,
+  registerBinding,
+  LifeCircleHookMap
+} from '@vue-transform/shared'
 
-import { LifeCircleHookMap, RenderFunction, VModel } from './data'
+import { RenderFunction, VModel } from './data'
 
 const generate = require('@babel/generator').default
 
@@ -401,19 +406,6 @@ export function transformBindings(
   }
 
   return output.length ? generate(program(output)).code || '' : ''
-}
-
-export function registerBinding<T = Expression>(
-  bindings: BindingMap<T>,
-  node: Identifier,
-  value: T,
-  type: BindingTypes
-) {
-  if (node.name in bindings) {
-    const name = node.name
-    bindings[name].type = type
-    if (value) bindings[name].value = value
-  } else bindings[node.name] = { type, value }
 }
 
 export function restoreMember(

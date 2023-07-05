@@ -1,5 +1,12 @@
 // import * as BindingTypesData from '@vue-transform/shared/binding-types'
-import { warnOnce, DEFAULT_FILENAME, BindingTypes } from '@vue-transform/shared'
+import {
+  warnOnce,
+  DEFAULT_FILENAME,
+  BindingMap,
+  BindingTypes,
+  registerBinding as register,
+  LifeCircleHookMap
+} from '@vue-transform/shared'
 
 import { isFunctionType, walkIdentifiers } from '@vue/compiler-dom'
 import {
@@ -16,7 +23,10 @@ import {
   Identifier,
   ExportSpecifier,
   Statement,
-  CallExpression
+  CallExpression,
+  Expression,
+  ClassDeclaration,
+  FunctionDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map-js'
@@ -35,11 +45,7 @@ import {
   DEFINE_PROPS,
   WITH_DEFAULTS
 } from './script/defineProps'
-import {
-  processDefineEmits,
-  genRuntimeEmits,
-  DEFINE_EMITS
-} from './script/defineEmits'
+import { processDefineEmits, DEFINE_EMITS } from './script/defineEmits'
 import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
@@ -141,6 +147,18 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+type BindingValue =
+  | Expression
+  | ClassDeclaration
+  | FunctionDeclaration
+  | Identifier
+  | CallExpression['arguments']
+
+type TransformBindingsMap = BindingMap<BindingValue> & {
+  watch: BindingMap<BindingValue>
+  $hooks: BindingMap<BindingValue>
+}
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -149,7 +167,7 @@ export interface ImportBinding {
 export function compileScript(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions
-): SFCScriptBlock {
+): SFCScriptBlock & { transBindings?: TransformBindingsMap } {
   if (!options.id) {
     warnOnce(
       `compileScript now requires passing the \`id\` option.\n` +
@@ -193,6 +211,9 @@ export function compileScript(
   // const ctx.bindingMetadata: BindingMetadata = {}
   const scriptBindings: Record<string, BindingTypes> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
+  const transBindings: TransformBindingsMap = Object.create(null)
+  transBindings.watch = Object.create(null)
+  transBindings.$hooks = Object.create(null)
 
   let defaultExport: Node | undefined
   let hasAwait = false
@@ -365,7 +386,14 @@ export function compileScript(
   }
 
   // 1.3 resolve possible user import alias of `ref` and `reactive`
-  const vueImportAliases: Record<string, string> = {}
+  const vueImportAliases: Record<string, string> = {
+    ref: 'ref',
+    reactive: 'reactive',
+    computed: 'computed',
+    shallowRef: 'shallowRef',
+    customRef: 'customRef',
+    toRef: 'toRef'
+  }
   for (const key in ctx.userImports) {
     const { source, imported, local } = ctx.userImports[key]
     if (source === 'vue') vueImportAliases[imported] = local
@@ -457,7 +485,8 @@ export function compileScript(
             node.declaration,
             scriptBindings,
             vueImportAliases,
-            hoistStatic
+            hoistStatic,
+            transBindings
           )
         }
       } else if (
@@ -472,7 +501,8 @@ export function compileScript(
           node,
           scriptBindings,
           vueImportAliases,
-          hoistStatic
+          hoistStatic,
+          transBindings
         )
       }
     }
@@ -520,6 +550,41 @@ export function compileScript(
         ctx.s.remove(expr.start! + startOffset, expr.end! + startOffset)
       } else {
         processDefineModel(ctx, expr)
+      }
+
+      // collect watch
+      if (isCallOf(expr, m => m === 'watch')) {
+        const args = expr.arguments || []
+        if (args[0]?.type === 'Identifier') {
+          register(
+            transBindings.watch,
+            args[0],
+            args.slice(1),
+            BindingTypes.WATCH
+          )
+        } else if (args[0]?.type === 'ArrowFunctionExpression') {
+          if (args[0].body.type === 'MemberExpression') {
+            // watch(()=> a.b
+            const { start, end } = args[0].body
+            const id = source.slice(start! + startOffset, end! + startOffset)
+            register(transBindings.watch, id, args.slice(1), BindingTypes.WATCH)
+          } else if (args[0].body.type === 'Identifier') {
+            // watch(()=> a,
+            register(
+              transBindings.watch,
+              args[0].body,
+              args.slice(1),
+              BindingTypes.WATCH
+            )
+          }
+        }
+      }
+
+      const hooks = Object.values(LifeCircleHookMap)
+      if (isCallOf(expr, m => hooks.includes(m))) {
+        const { name } = expr.callee as Identifier
+        const id = Object.keys(LifeCircleHookMap)[hooks.indexOf(name)]
+        register(transBindings, id, expr.arguments, BindingTypes.HOOK)
       }
     }
 
@@ -586,7 +651,8 @@ export function compileScript(
         node,
         setupBindings,
         vueImportAliases,
-        hoistStatic
+        hoistStatic,
+        transBindings
       )
     }
 
@@ -833,8 +899,8 @@ export function compileScript(
   const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
-  const emitsDecl = genRuntimeEmits(ctx)
-  if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
+  // const emitsDecl = genRuntimeEmits(ctx)
+  // if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
 
   let definedOptions = ''
   if (ctx.optionsRuntimeDecl) {
@@ -893,6 +959,7 @@ export function compileScript(
   return {
     ...scriptSetup,
     bindings: ctx.bindingMetadata as any,
+    transBindings,
     imports: ctx.userImports,
     content: ctx.s.toString(),
     map:
@@ -922,7 +989,8 @@ function walkDeclaration(
   node: Declaration,
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>,
-  hoistStatic: boolean
+  hoistStatic: boolean,
+  transBindings: TransformBindingsMap
 ): boolean {
   let isAllLiteral = false
 
@@ -957,6 +1025,8 @@ function walkDeclaration(
           bindingType = isConst
             ? BindingTypes.SETUP_REACTIVE_CONST
             : BindingTypes.SETUP_LET
+
+          register(transBindings, id, init.arguments, BindingTypes.DATA)
         } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
@@ -966,6 +1036,13 @@ function walkDeclaration(
           bindingType = isCallOf(init, DEFINE_PROPS)
             ? BindingTypes.SETUP_REACTIVE_CONST
             : BindingTypes.SETUP_CONST
+
+          if (
+            init?.type === 'ArrowFunctionExpression' ||
+            init?.type === 'FunctionExpression'
+          ) {
+            register(transBindings, id, init, BindingTypes.METHOD)
+          }
         } else if (isConst) {
           if (
             isCallOf(
@@ -980,13 +1057,20 @@ function walkDeclaration(
             )
           ) {
             bindingType = BindingTypes.SETUP_REF
+
+            const args = (init as CallExpression)?.arguments || []
+            let type = BindingTypes.DATA
+            if (isCallOf(init, m => m === userImportAliases['computed']))
+              type = BindingTypes.COMPUTED
+
+            register(transBindings, id, args, type)
           } else {
             bindingType = BindingTypes.SETUP_MAYBE_REF
           }
         } else {
           bindingType = BindingTypes.SETUP_LET
         }
-        registerBinding(bindings, id, null, bindingType)
+        registerBinding(bindings, id, bindingType)
       } else {
         if (isCallOf(init, DEFINE_PROPS)) {
           continue
@@ -1005,13 +1089,15 @@ function walkDeclaration(
     bindings[node.id!.name] = isAllLiteral
       ? BindingTypes.LITERAL_CONST
       : BindingTypes.SETUP_CONST
-  } else if (
-    node.type === 'FunctionDeclaration' ||
-    node.type === 'ClassDeclaration'
-  ) {
+  } else if (node.type === 'FunctionDeclaration') {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
     bindings[node.id!.name] = BindingTypes.SETUP_CONST
+
+    register(transBindings, node.id!, node, BindingTypes.METHOD)
+  } else if (node.type === 'ClassDeclaration') {
+    bindings[node.id!.name] = BindingTypes.SETUP_CONST
+    register(transBindings, node.id!, node, BindingTypes.SETUP_CONST)
   }
 
   return isAllLiteral
@@ -1032,7 +1118,7 @@ function walkObjectPattern(
           : isConst
           ? BindingTypes.SETUP_MAYBE_REF
           : BindingTypes.SETUP_LET
-        registerBinding(bindings, p.key, null, type)
+        registerBinding(bindings, p.key, type)
       } else {
         walkPattern(p.value, bindings, isConst, isDefineCall)
       }
@@ -1040,7 +1126,7 @@ function walkObjectPattern(
       // ...rest
       // argument can only be identifier when destructuring
       const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
-      registerBinding(bindings, p.argument as Identifier, null, type)
+      registerBinding(bindings, p.argument as Identifier, type)
     }
   }
 }
@@ -1068,11 +1154,11 @@ function walkPattern(
       : isConst
       ? BindingTypes.SETUP_MAYBE_REF
       : BindingTypes.SETUP_LET
-    registerBinding(bindings, node, null, type)
+    registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
     // argument can only be identifier when destructuring
     const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
-    registerBinding(bindings, node.argument as Identifier, null, type)
+    registerBinding(bindings, node.argument as Identifier, type)
   } else if (node.type === 'ObjectPattern') {
     walkObjectPattern(node, bindings, isConst)
   } else if (node.type === 'ArrayPattern') {
@@ -1084,7 +1170,7 @@ function walkPattern(
         : isConst
         ? BindingTypes.SETUP_MAYBE_REF
         : BindingTypes.SETUP_LET
-      registerBinding(bindings, node.left, null, type)
+      registerBinding(bindings, node.left, type)
     } else {
       walkPattern(node.left, bindings, isConst)
     }
