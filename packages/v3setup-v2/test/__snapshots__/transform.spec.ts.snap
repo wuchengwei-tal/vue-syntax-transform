@@ -1,0 +1,106 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`script transform > computed 1`] = `
+"export default {
+  created() {
+
+
+
+
+}}"
+`;
+
+exports[`script transform > cssVars 1`] = `
+"export default {
+  created() {
+
+
+
+}}"
+`;
+
+exports[`script transform > imports 1`] = `
+"import img from './img.webp';
+import Component from './Component.vue';
+import { Checkbox } from 'ant-design-vue';
+
+export default {
+  created() {
+
+}}"
+`;
+
+exports[`script transform > life cycles hooks 1`] = `
+"export default {
+  created() {
+
+
+
+
+
+}}"
+`;
+
+exports[`script transform > macros 1`] = `
+"export default {
+  ...{
+    name: 'Component',
+    inheritAttrs: false,
+},
+  props: {
+    a: { type: Number, required: false }
+  },
+  created() {
+
+
+
+
+
+}}"
+`;
+
+exports[`script transform > methods 1`] = `
+"export default {
+  created() {
+
+
+
+
+
+
+
+
+}}"
+`;
+
+exports[`script transform > ref 1`] = `
+"export default {
+  created() {
+
+
+
+
+
+
+let b = 1
+}}"
+`;
+
+exports[`script transform > watch 1`] = `
+"export default {
+  created() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}"
+`;

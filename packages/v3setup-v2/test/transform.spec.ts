@@ -1,5 +1,5 @@
-import { BindingTypes } from '@vue-transform/shared'
-import { transform } from '../src/transform'
+import { BindingTypes, assertCode } from '@vue-transform/shared'
+import { transform } from '../src'
 
 describe('script transform', () => {
   test('ref', () => {
@@ -13,18 +13,7 @@ let a = reactive({a:1})
 let b = 1
 </script>
 `)
-    expect(content).toMatchInlineSnapshot(`
-      "export default {
-        setup() {
-
-      const nickname = ref('nickname');
-      const avatar = ref(img);
-      const visible = ref(false);
-      const data = reactive({a:1})
-      let a = reactive({a:1})
-      let b = 1
-      }"
-    `)
+    assertCode(content)
 
     if (!transBindings) return
     expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
@@ -45,23 +34,7 @@ defineOptions({
 })
 </script>
 `)
-    expect(content).toMatchInlineSnapshot(`
-      "export default {
-        ...{
-          name: 'Component',
-          inheritAttrs: false,
-      },
-        props: {
-          a: { type: Number, required: false }
-        },
-        setup() {
-
-
-
-
-
-      }"
-    `)
+    assertCode(content)
 
     expect(content).not.toMatch('defineEmits')
     expect(content).not.toMatch('defineProps')
@@ -78,16 +51,7 @@ import Component from './Component.vue';
 import { Checkbox } from 'ant-design-vue';
 </script>
 `)
-    expect(content).toMatchInlineSnapshot(`
-      "import img from './img.webp';
-      import Component from './Component.vue';
-      import { Checkbox } from 'ant-design-vue';
-
-      export default {
-        setup() {
-
-      }"
-    `)
+    assertCode(content)
   })
 
   test('computed', () => {
@@ -98,15 +62,7 @@ const name = computed(() => nickname.value);
 const age = computed(() => 18);
 </script>
 `)
-    expect(content).toMatchInlineSnapshot(`
-      "export default {
-        setup() {
-
-      const nickname = ref('nickname');
-      const name = computed(() => nickname.value);
-      const age = computed(() => 18);
-      }"
-    `)
+    assertCode(content)
 
     if (!transBindings) return
     expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
@@ -129,23 +85,7 @@ const changeAge = () => {
 }
 </script>
 `)
-    expect(content).toMatchInlineSnapshot(`
-      "export default {
-        setup() {
-
-      const nickname = ref('nickname');
-      const name = computed(() => nickname.value);
-      const age = computed(() => 18);
-
-      function changeName() {
-        nickname.value = 'new nickname'
-      }
-
-      const changeAge = () => {
-        age.value = 20
-      }
-      }"
-    `)
+    assertCode(content)
 
     if (!transBindings) return
     expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
@@ -184,36 +124,7 @@ watchEffect(()=> {
 })
 </script>
 `)
-    expect(content).toMatchInlineSnapshot(`
-      "export default {
-        setup() {
-
-      const nickname = ref('nickname');
-      const info = reactive({a:1})
-      const name = computed(() => nickname.value);
-      const age = computed(() => info.a);
-
-      watch(nickname, () => {
-        console.log('a changed')
-        info.a++
-      }, { immediate: true, deep: true })
-
-      watch(() => info.a, () => {
-        console.log('a changed')
-        info.a++
-      }, { immediate: true, deep: true })
-
-      watch(() => age, () => {
-        console.log('a changed')
-        info.a++
-      }, { immediate: true, deep: true })
-
-      watchEffect(()=> {
-        info.a++
-        console.log('a changed')
-      })
-      }"
-    `)
+    assertCode(content)
 
     if (!transBindings) return
     expect(transBindings['nickname']?.type).toEqual(BindingTypes.DATA)
@@ -225,7 +136,7 @@ watchEffect(()=> {
     expect(transBindings['watch']['info.a']?.type).toEqual(BindingTypes.WATCH)
     // expect(transBindings['watchEffect']?.type).toEqual(BindingTypes.WATCH)
   })
-  test('life cycles', () => {
+  test('life cycles hooks', () => {
     const { content } = transform(`
 <script lang="ts" setup>
 const a = ref(1)
@@ -238,20 +149,7 @@ onUnmounted(()=> {
 })
 </script>
 `)
-    expect(content).toMatchInlineSnapshot(`
-      "export default {
-        setup() {
-
-      const a = ref(1)
-      onMounted(()=> {
-        a.value = 2
-      })
-
-      onUnmounted(()=> {
-        a.value = 3
-      })
-      }"
-    `)
+    assertCode(content)
   })
 
   test('cssVars', () => {
@@ -268,19 +166,6 @@ div{
 }
 </style>
 `)
-
-    expect(content).toMatchInlineSnapshot(`
-      "export default {
-        setup() {
-
-      _useCssVars(_ctx => ({
-        \\"-a\\": (a.value),
-        \\"-b\\": (b.value)
-      }))
-
-      const a = ref('1px')
-      const b = ref(2)
-      }"
-    `)
+    assertCode(content)
   })
 })

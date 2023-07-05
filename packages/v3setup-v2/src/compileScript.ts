@@ -292,6 +292,128 @@ export function compileScript(
     })
   }
 
+  function walkDeclaration(
+    from: 'script' | 'scriptSetup',
+    node: Declaration,
+    bindings: Record<string, BindingTypes>,
+    userImportAliases: Record<string, string>,
+    hoistStatic: boolean
+  ): boolean {
+    let isAllLiteral = false
+
+    if (node.type === 'VariableDeclaration') {
+      const isConst = node.kind === 'const'
+      isAllLiteral =
+        isConst &&
+        node.declarations.every(
+          decl => decl.id.type === 'Identifier' && isStaticNode(decl.init!)
+        )
+
+      // export const foo = ...
+      for (const { id, init: _init } of node.declarations) {
+        const init = _init && unwrapTSNode(_init)
+        const isDefineCall = !!(
+          isConst &&
+          isCallOf(
+            init,
+            c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS
+          )
+        )
+        if (id.type === 'Identifier') {
+          let bindingType
+          const userReactiveBinding = userImportAliases['reactive']
+          if (
+            (hoistStatic || from === 'script') &&
+            (isAllLiteral || (isConst && isStaticNode(init!)))
+          ) {
+            bindingType = BindingTypes.LITERAL_CONST
+          } else if (isCallOf(init, userReactiveBinding)) {
+            // treat reactive() calls as let since it's meant to be mutable
+            bindingType = isConst
+              ? BindingTypes.SETUP_REACTIVE_CONST
+              : BindingTypes.SETUP_LET
+
+            register(transBindings, id, init.arguments, BindingTypes.DATA)
+            ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+          } else if (
+            // if a declaration is a const literal, we can mark it so that
+            // the generated render fn code doesn't need to unref() it
+            isDefineCall ||
+            (isConst && canNeverBeRef(init!, userReactiveBinding))
+          ) {
+            bindingType = isCallOf(init, DEFINE_PROPS)
+              ? BindingTypes.SETUP_REACTIVE_CONST
+              : BindingTypes.SETUP_CONST
+
+            if (
+              init?.type === 'ArrowFunctionExpression' ||
+              init?.type === 'FunctionExpression'
+            ) {
+              register(transBindings, id, init, BindingTypes.METHOD)
+              ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+            }
+          } else if (isConst) {
+            if (
+              isCallOf(
+                init,
+                m =>
+                  m === userImportAliases['ref'] ||
+                  m === userImportAliases['computed'] ||
+                  m === userImportAliases['shallowRef'] ||
+                  m === userImportAliases['customRef'] ||
+                  m === userImportAliases['toRef'] ||
+                  m === DEFINE_MODEL
+              )
+            ) {
+              bindingType = BindingTypes.SETUP_REF
+
+              const args = (init as CallExpression)?.arguments || []
+              let type = BindingTypes.DATA
+              if (isCallOf(init, m => m === userImportAliases['computed']))
+                type = BindingTypes.COMPUTED
+
+              register(transBindings, id, args, type)
+              ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+            } else {
+              bindingType = BindingTypes.SETUP_MAYBE_REF
+            }
+          } else {
+            bindingType = BindingTypes.SETUP_LET
+          }
+          registerBinding(bindings, id, bindingType)
+        } else {
+          if (isCallOf(init, DEFINE_PROPS)) {
+            continue
+          }
+          if (id.type === 'ObjectPattern') {
+            walkObjectPattern(id, bindings, isConst, isDefineCall)
+          } else if (id.type === 'ArrayPattern') {
+            walkArrayPattern(id, bindings, isConst, isDefineCall)
+          }
+        }
+      }
+    } else if (node.type === 'TSEnumDeclaration') {
+      isAllLiteral = node.members.every(
+        member => !member.initializer || isStaticNode(member.initializer)
+      )
+      bindings[node.id!.name] = isAllLiteral
+        ? BindingTypes.LITERAL_CONST
+        : BindingTypes.SETUP_CONST
+    } else if (node.type === 'FunctionDeclaration') {
+      // export function foo() {} / export class Foo {}
+      // export declarations must be named.
+      bindings[node.id!.name] = BindingTypes.SETUP_CONST
+
+      register(transBindings, node.id!, node, BindingTypes.METHOD)
+      ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+    } else if (node.type === 'ClassDeclaration') {
+      bindings[node.id!.name] = BindingTypes.SETUP_CONST
+      register(transBindings, node.id!, node, BindingTypes.SETUP_CONST)
+    }
+
+    return isAllLiteral
+  }
+
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
 
@@ -485,8 +607,7 @@ export function compileScript(
             node.declaration,
             scriptBindings,
             vueImportAliases,
-            hoistStatic,
-            transBindings
+            hoistStatic
           )
         }
       } else if (
@@ -501,8 +622,7 @@ export function compileScript(
           node,
           scriptBindings,
           vueImportAliases,
-          hoistStatic,
-          transBindings
+          hoistStatic
         )
       }
     }
@@ -578,6 +698,11 @@ export function compileScript(
             )
           }
         }
+        ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+      }
+
+      if (isCallOf(expr, m => m === 'watchEffect')) {
+        ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       }
 
       const hooks = Object.values(LifeCircleHookMap)
@@ -585,6 +710,7 @@ export function compileScript(
         const { name } = expr.callee as Identifier
         const id = Object.keys(LifeCircleHookMap)[hooks.indexOf(name)]
         register(transBindings, id, expr.arguments, BindingTypes.HOOK)
+        ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       }
     }
 
@@ -651,8 +777,7 @@ export function compileScript(
         node,
         setupBindings,
         vueImportAliases,
-        hoistStatic,
-        transBindings
+        hoistStatic
       )
     }
 
@@ -819,17 +944,17 @@ export function compileScript(
     // no need to do this when targeting SSR
     !(options.inlineTemplate && options.templateOptions?.ssr)
   ) {
-    ctx.helperImports.add(CSS_VARS_HELPER)
-    ctx.helperImports.add('unref')
-    ctx.s.prependLeft(
-      startOffset,
-      `\n${genCssVarsCode(
-        sfc.cssVars,
-        ctx.bindingMetadata,
-        scopeId,
-        !!options.isProd
-      )}\n`
-    )
+    // ctx.helperImports.add(CSS_VARS_HELPER)
+    // ctx.helperImports.add('unref')
+    // ctx.s.prependLeft(
+    //   startOffset,
+    //   `\n${genCssVarsCode(
+    //     sfc.cssVars,
+    //     ctx.bindingMetadata,
+    //     scopeId,
+    //     !!options.isProd
+    //   )}\n`
+    // )
   }
 
   // 9. finalize setup() argument signature
@@ -927,9 +1052,9 @@ export function compileScript(
       startOffset,
       `\n${genDefaultAs} {${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup() {\n`
+      }created() {\n`
     )
-    ctx.s.appendRight(endOffset, `}`)
+    ctx.s.appendRight(endOffset, `}}`)
   } else {
     if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
@@ -939,16 +1064,16 @@ export function compileScript(
         `\n${genDefaultAs} Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup() {\n`
+          `${hasAwait ? `async ` : ``}created() {\n`
       )
       ctx.s.appendRight(endOffset, `})`)
     } else {
       ctx.s.prependLeft(
         startOffset,
         `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup() {\n`
+          `${hasAwait ? `async ` : ``}created() {\n`
       )
-      ctx.s.appendRight(endOffset, `}`)
+      ctx.s.appendRight(endOffset, `}}`)
     }
   }
 
@@ -982,125 +1107,6 @@ function registerBinding(
   type: BindingTypes
 ) {
   bindings[node.name] = type
-}
-
-function walkDeclaration(
-  from: 'script' | 'scriptSetup',
-  node: Declaration,
-  bindings: Record<string, BindingTypes>,
-  userImportAliases: Record<string, string>,
-  hoistStatic: boolean,
-  transBindings: TransformBindingsMap
-): boolean {
-  let isAllLiteral = false
-
-  if (node.type === 'VariableDeclaration') {
-    const isConst = node.kind === 'const'
-    isAllLiteral =
-      isConst &&
-      node.declarations.every(
-        decl => decl.id.type === 'Identifier' && isStaticNode(decl.init!)
-      )
-
-    // export const foo = ...
-    for (const { id, init: _init } of node.declarations) {
-      const init = _init && unwrapTSNode(_init)
-      const isDefineCall = !!(
-        isConst &&
-        isCallOf(
-          init,
-          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS
-        )
-      )
-      if (id.type === 'Identifier') {
-        let bindingType
-        const userReactiveBinding = userImportAliases['reactive']
-        if (
-          (hoistStatic || from === 'script') &&
-          (isAllLiteral || (isConst && isStaticNode(init!)))
-        ) {
-          bindingType = BindingTypes.LITERAL_CONST
-        } else if (isCallOf(init, userReactiveBinding)) {
-          // treat reactive() calls as let since it's meant to be mutable
-          bindingType = isConst
-            ? BindingTypes.SETUP_REACTIVE_CONST
-            : BindingTypes.SETUP_LET
-
-          register(transBindings, id, init.arguments, BindingTypes.DATA)
-        } else if (
-          // if a declaration is a const literal, we can mark it so that
-          // the generated render fn code doesn't need to unref() it
-          isDefineCall ||
-          (isConst && canNeverBeRef(init!, userReactiveBinding))
-        ) {
-          bindingType = isCallOf(init, DEFINE_PROPS)
-            ? BindingTypes.SETUP_REACTIVE_CONST
-            : BindingTypes.SETUP_CONST
-
-          if (
-            init?.type === 'ArrowFunctionExpression' ||
-            init?.type === 'FunctionExpression'
-          ) {
-            register(transBindings, id, init, BindingTypes.METHOD)
-          }
-        } else if (isConst) {
-          if (
-            isCallOf(
-              init,
-              m =>
-                m === userImportAliases['ref'] ||
-                m === userImportAliases['computed'] ||
-                m === userImportAliases['shallowRef'] ||
-                m === userImportAliases['customRef'] ||
-                m === userImportAliases['toRef'] ||
-                m === DEFINE_MODEL
-            )
-          ) {
-            bindingType = BindingTypes.SETUP_REF
-
-            const args = (init as CallExpression)?.arguments || []
-            let type = BindingTypes.DATA
-            if (isCallOf(init, m => m === userImportAliases['computed']))
-              type = BindingTypes.COMPUTED
-
-            register(transBindings, id, args, type)
-          } else {
-            bindingType = BindingTypes.SETUP_MAYBE_REF
-          }
-        } else {
-          bindingType = BindingTypes.SETUP_LET
-        }
-        registerBinding(bindings, id, bindingType)
-      } else {
-        if (isCallOf(init, DEFINE_PROPS)) {
-          continue
-        }
-        if (id.type === 'ObjectPattern') {
-          walkObjectPattern(id, bindings, isConst, isDefineCall)
-        } else if (id.type === 'ArrayPattern') {
-          walkArrayPattern(id, bindings, isConst, isDefineCall)
-        }
-      }
-    }
-  } else if (node.type === 'TSEnumDeclaration') {
-    isAllLiteral = node.members.every(
-      member => !member.initializer || isStaticNode(member.initializer)
-    )
-    bindings[node.id!.name] = isAllLiteral
-      ? BindingTypes.LITERAL_CONST
-      : BindingTypes.SETUP_CONST
-  } else if (node.type === 'FunctionDeclaration') {
-    // export function foo() {} / export class Foo {}
-    // export declarations must be named.
-    bindings[node.id!.name] = BindingTypes.SETUP_CONST
-
-    register(transBindings, node.id!, node, BindingTypes.METHOD)
-  } else if (node.type === 'ClassDeclaration') {
-    bindings[node.id!.name] = BindingTypes.SETUP_CONST
-    register(transBindings, node.id!, node, BindingTypes.SETUP_CONST)
-  }
-
-  return isAllLiteral
 }
 
 function walkObjectPattern(
