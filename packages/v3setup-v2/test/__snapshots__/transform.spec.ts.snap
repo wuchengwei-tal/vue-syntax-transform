@@ -104,6 +104,14 @@ exports[`script transform > methods 1`] = `
     age() {
       return 18;
     }
+  },
+  methods: {
+    changeName() {
+      nickname.value = 'new nickname';
+    },
+    changeAge() {
+      age.value = 20;
+    }
   }
 ,
   created() {

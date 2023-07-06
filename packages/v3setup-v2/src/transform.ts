@@ -13,9 +13,9 @@ import {
   objectExpression,
   objectMethod,
   blockStatement,
-  returnStatement
+  returnStatement,
+  expressionStatement
 } from '@babel/types'
-import { BlockStatement } from '@vue/compiler-dom'
 
 const generate = require('@babel/generator').default
 
@@ -57,8 +57,29 @@ export function transformBindings(bindings: TransformBindingsMap) {
   }
 
   function transMethod(key: string, value: BindingValue, options: Options) {
-    // console.log(key, value)
-    //
+    if (Array.isArray(value)) return
+    const { type } = value
+    if (type === 'ArrowFunctionExpression') {
+      if (value.body.type === 'BlockStatement')
+        options.methods.push(
+          objectMethod('method', identifier(key), value.params, value.body)
+        )
+      else
+        options.methods.push(
+          objectMethod(
+            'method',
+            identifier(key),
+            value.params,
+            blockStatement([expressionStatement(value.body)])
+          )
+        )
+    }
+
+    if (type === 'FunctionDeclaration' || type === 'FunctionExpression') {
+      options.methods.push(
+        objectMethod('method', identifier(key), value.params, value.body)
+      )
+    }
   }
 
   function transGetters(key: string, value: BindingValue, options: Options) {
@@ -113,6 +134,12 @@ export function transformBindings(bindings: TransformBindingsMap) {
   if (options.computed.length) {
     output.push(
       objectProperty(identifier('computed'), objectExpression(options.computed))
+    )
+  }
+
+  if (options.methods.length) {
+    output.push(
+      objectProperty(identifier('methods'), objectExpression(options.methods))
     )
   }
 
