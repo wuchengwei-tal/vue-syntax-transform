@@ -698,7 +698,7 @@ export function compileScript(
       if (isCallOf(expr, m => hooks.includes(m))) {
         const { name } = expr.callee as Identifier
         const id = Object.keys(LifeCircleHookMap)[hooks.indexOf(name)]
-        register(transBindings, id, expr.arguments, BindingTypes.HOOK)
+        register(transBindings.$hooks, id, expr.arguments, BindingTypes.HOOK)
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       }
     }
@@ -1014,7 +1014,7 @@ export function compileScript(
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
   const code = transformBindings(transBindings)
-  if(code) runtimeOptions += `\n  ${code},`
+  if (code) runtimeOptions += `\n  ${code},`
 
   // const emitsDecl = genRuntimeEmits(ctx)
   // if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`

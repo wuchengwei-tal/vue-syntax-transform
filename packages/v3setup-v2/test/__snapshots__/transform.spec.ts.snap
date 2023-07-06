@@ -60,6 +60,12 @@ exports[`script transform > life cycles hooks 1`] = `
     return {
       a: 1
     };
+  },
+  mounted() {
+    a.value = 2;
+  },
+  destroyed() {
+    a.value = 3;
   }
 ,
   created() {

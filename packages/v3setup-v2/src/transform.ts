@@ -36,6 +36,7 @@ type Options = {
   computed: (ObjectMethod | ObjectProperty)[]
   methods: ObjectMethod[]
   watch: (ObjectMethod | ObjectProperty)[]
+  hooks: ObjectMethod[]
 }
 
 export function transformBindings(bindings: TransformBindingsMap) {
@@ -43,7 +44,8 @@ export function transformBindings(bindings: TransformBindingsMap) {
     data: [],
     computed: [],
     methods: [],
-    watch: []
+    watch: [],
+    hooks: []
   }
 
   function transWatcher(key: string, value: BindingValue, options: Options) {
@@ -52,8 +54,29 @@ export function transformBindings(bindings: TransformBindingsMap) {
   }
 
   function transHook(key: string, value: BindingValue, options: Options) {
-    // console.log(key, value)
-    //
+    if (!Array.isArray(value)) return
+
+    if (value[0].type === 'ArrowFunctionExpression') {
+      if (value[0].body.type === 'BlockStatement')
+        options.hooks.push(
+          objectMethod('method', identifier(key), [], value[0].body)
+        )
+      else
+        options.hooks.push(
+          objectMethod(
+            'method',
+            identifier(key),
+            value[0].params,
+            blockStatement([expressionStatement(value[0].body)])
+          )
+        )
+    }
+
+    if (value[0].type === 'FunctionExpression') {
+      options.hooks.push(
+        objectMethod('method', identifier(key), [], value[0].body)
+      )
+    }
   }
 
   function transMethod(key: string, value: BindingValue, options: Options) {
@@ -111,7 +134,6 @@ export function transformBindings(bindings: TransformBindingsMap) {
       for (const [key, { value }] of Object.entries(bindings.watch))
         transWatcher(key, value, options)
     }
-
     if (key === '$hooks') {
       for (const [key, { value }] of Object.entries(bindings.$hooks))
         transHook(key, value, options)
@@ -142,6 +164,8 @@ export function transformBindings(bindings: TransformBindingsMap) {
       objectProperty(identifier('methods'), objectExpression(options.methods))
     )
   }
+
+  output.push(...options.hooks)
 
   const code: string = output.length
     ? generate(objectExpression(output)).code || ''
