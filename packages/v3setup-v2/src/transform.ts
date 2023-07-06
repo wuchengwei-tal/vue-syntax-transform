@@ -9,6 +9,9 @@ import {
   ObjectProperty,
   ObjectMethod,
   ObjectExpression,
+  BlockStatement,
+  Function,
+  Statement,
   //
   objectProperty,
   identifier,
@@ -17,7 +20,8 @@ import {
   objectMethod,
   blockStatement,
   returnStatement,
-  expressionStatement
+  expressionStatement,
+  isFunction
 } from '@babel/types'
 
 const generate = require('@babel/generator').default
@@ -53,110 +57,63 @@ export function transformBindings(bindings: TransformBindingsMap) {
 
   function transWatcher(key: string, value: BindingValue, options: Options) {
     if (!Array.isArray(value)) return
+
     const [cb, opts] = value
-    let handler: ObjectMethod
-    if (cb.type === 'ArrowFunctionExpression') {
-      if (cb.body.type === 'BlockStatement')
-        handler = objectMethod(
+    if (isFunction(cb)) {
+      const body = normalizeBody(cb)
+      if (body) {
+        const handler = objectMethod(
           'method',
           identifier('handler'),
           cb.params,
-          cb.body
+          body
         )
-      else {
-        handler = objectMethod(
-          'method',
-          identifier('handler'),
-          cb.params,
-          blockStatement([expressionStatement(cb.body)])
+
+        options.watch.push(
+          objectProperty(
+            key.includes('.') ? stringLiteral(key) : identifier(key),
+            objectExpression([
+              handler,
+              ...(opts as ObjectExpression).properties
+            ])
+          )
         )
       }
-    }
-    if (cb.type === 'FunctionExpression') {
-      handler = objectMethod(
-        'method',
-        identifier('handler'),
-        cb.params,
-        cb.body
-      )
-    }
-
-    if (handler!) {
-      options.watch.push(
-        objectProperty(
-          key.includes('.') ? stringLiteral(key) : identifier(key),
-          objectExpression([handler, ...(opts as ObjectExpression).properties])
-        )
-      )
     }
   }
 
   function transHook(key: string, value: BindingValue, options: Options) {
     if (!Array.isArray(value)) return
+    if (!isFunction(value[0])) return
 
-    if (value[0].type === 'ArrowFunctionExpression') {
-      if (value[0].body.type === 'BlockStatement')
-        options.hooks.push(
-          objectMethod('method', identifier(key), [], value[0].body)
-        )
-      else
-        options.hooks.push(
-          objectMethod(
-            'method',
-            identifier(key),
-            value[0].params,
-            blockStatement([expressionStatement(value[0].body)])
-          )
-        )
-    }
+    const body = normalizeBody(value[0])
 
-    if (value[0].type === 'FunctionExpression') {
+    if (body) {
       options.hooks.push(
-        objectMethod('method', identifier(key), [], value[0].body)
+        objectMethod('method', identifier(key), value[0].params, body)
       )
     }
   }
 
   function transMethod(key: string, value: BindingValue, options: Options) {
-    if (Array.isArray(value)) return
-    const { type } = value
-    if (type === 'ArrowFunctionExpression') {
-      if (value.body.type === 'BlockStatement')
-        options.methods.push(
-          objectMethod('method', identifier(key), value.params, value.body)
-        )
-      else
-        options.methods.push(
-          objectMethod(
-            'method',
-            identifier(key),
-            value.params,
-            blockStatement([expressionStatement(value.body)])
-          )
-        )
-    }
+    if (!isFunction(value)) return
 
-    if (type === 'FunctionDeclaration' || type === 'FunctionExpression') {
+    const body = normalizeBody(value)
+
+    if (body) {
       options.methods.push(
-        objectMethod('method', identifier(key), value.params, value.body)
+        objectMethod('method', identifier(key), value.params, body)
       )
     }
   }
 
   function transGetters(key: string, value: BindingValue, options: Options) {
     if (!Array.isArray(value)) return
-    const { type } = value[0]
+    if (!isFunction(value[0])) return
+    const body = normalizeBody(value[0], returnStatement)
 
-    if (type === 'ArrowFunctionExpression' || type === 'FunctionExpression') {
-      const { body } = value[0]
-      if (body.type === 'BlockStatement') {
-        // options.computed.push(objectMethod('method', identifier(key), [], body))
-      } else {
-        const block = blockStatement([returnStatement(body)])
-        options.computed.push(
-          objectMethod('method', identifier(key), [], block)
-        )
-      }
+    if (body) {
+      options.computed.push(objectMethod('method', identifier(key), [], body))
     }
   }
 
@@ -234,4 +191,22 @@ function transState(key: string, value: BindingValue, options: Options) {
     if (type === 'FunctionDeclaration' || type === 'ClassDeclaration') return
     options.data.push(objectProperty(identifier(key), value))
   }
+}
+
+function normalizeBody(
+  node: Function,
+  statement: (expr: Expression) => Statement = expressionStatement
+) {
+  let body: BlockStatement | undefined
+  if (node.type === 'ArrowFunctionExpression') {
+    if (node.body.type === 'BlockStatement') body = node.body
+    else body = blockStatement([statement(node.body)])
+  }
+  if (
+    node.type === 'FunctionExpression' ||
+    node.type === 'FunctionDeclaration'
+  ) {
+    body = node.body
+  }
+  return body
 }
