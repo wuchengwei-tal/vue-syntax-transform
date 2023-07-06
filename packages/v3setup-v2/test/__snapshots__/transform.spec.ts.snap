@@ -178,6 +178,32 @@ exports[`script transform > watch 1`] = `
     age() {
       return info.a;
     }
+  },
+  watch: {
+    nickname: {
+      handler() {
+        console.log('a changed');
+        info.a++;
+      },
+      immediate: true,
+      deep: true
+    },
+    \\"info.a\\": {
+      handler() {
+        console.log('a changed');
+        info.a++;
+      },
+      immediate: true,
+      deep: true
+    },
+    age: {
+      handler() {
+        console.log('a changed');
+        info.a++;
+      },
+      immediate: true,
+      deep: true
+    }
   }
 ,
   created() {

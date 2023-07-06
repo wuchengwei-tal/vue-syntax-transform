@@ -8,8 +8,11 @@ import {
   CallExpression,
   ObjectProperty,
   ObjectMethod,
+  ObjectExpression,
+  //
   objectProperty,
   identifier,
+  stringLiteral,
   objectExpression,
   objectMethod,
   blockStatement,
@@ -35,7 +38,7 @@ type Options = {
   data: ObjectProperty[]
   computed: (ObjectMethod | ObjectProperty)[]
   methods: ObjectMethod[]
-  watch: (ObjectMethod | ObjectProperty)[]
+  watch: ObjectProperty[]
   hooks: ObjectMethod[]
 }
 
@@ -49,8 +52,43 @@ export function transformBindings(bindings: TransformBindingsMap) {
   }
 
   function transWatcher(key: string, value: BindingValue, options: Options) {
-    // console.log(key, value)
-    //
+    if (!Array.isArray(value)) return
+    const [cb, opts] = value
+    let handler: ObjectMethod
+    if (cb.type === 'ArrowFunctionExpression') {
+      if (cb.body.type === 'BlockStatement')
+        handler = objectMethod(
+          'method',
+          identifier('handler'),
+          cb.params,
+          cb.body
+        )
+      else {
+        handler = objectMethod(
+          'method',
+          identifier('handler'),
+          cb.params,
+          blockStatement([expressionStatement(cb.body)])
+        )
+      }
+    }
+    if (cb.type === 'FunctionExpression') {
+      handler = objectMethod(
+        'method',
+        identifier('handler'),
+        cb.params,
+        cb.body
+      )
+    }
+
+    if (handler!) {
+      options.watch.push(
+        objectProperty(
+          key.includes('.') ? stringLiteral(key) : identifier(key),
+          objectExpression([handler, ...(opts as ObjectExpression).properties])
+        )
+      )
+    }
   }
 
   function transHook(key: string, value: BindingValue, options: Options) {
@@ -162,6 +200,12 @@ export function transformBindings(bindings: TransformBindingsMap) {
   if (options.methods.length) {
     output.push(
       objectProperty(identifier('methods'), objectExpression(options.methods))
+    )
+  }
+
+  if (options.watch.length) {
+    output.push(
+      objectProperty(identifier('watch'), objectExpression(options.watch))
     )
   }
 
