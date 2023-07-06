@@ -59,6 +59,7 @@ import {
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
+import { transformBindings, TransformBindingsMap } from './transform'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -145,18 +146,6 @@ export interface ImportBinding {
   source: string
   isFromSetup: boolean
   isUsedInTemplate: boolean
-}
-
-type BindingValue =
-  | Expression
-  | ClassDeclaration
-  | FunctionDeclaration
-  | Identifier
-  | CallExpression['arguments']
-
-type TransformBindingsMap = BindingMap<BindingValue> & {
-  watch: BindingMap<BindingValue>
-  $hooks: BindingMap<BindingValue>
 }
 
 /**
@@ -1023,6 +1012,9 @@ export function compileScript(
 
   const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
+
+  const code = transformBindings(transBindings)
+  if(code) runtimeOptions += `\n  ${code},`
 
   // const emitsDecl = genRuntimeEmits(ctx)
   // if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
