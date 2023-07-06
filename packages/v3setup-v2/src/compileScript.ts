@@ -361,6 +361,9 @@ export function compileScript(
               ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
               bindingType = BindingTypes.SETUP_MAYBE_REF
+              if (isCallOf(init, 'useRouter') || isCallOf(init, 'useRoute')) {
+                ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+              }
             }
           } else {
             bindingType = BindingTypes.SETUP_LET
@@ -393,7 +396,7 @@ export function compileScript(
       ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
     } else if (node.type === 'ClassDeclaration') {
       bindings[node.id!.name] = BindingTypes.SETUP_CONST
-      register(transBindings, node.id!, node, BindingTypes.SETUP_CONST)
+      hoistNode(node)
     }
 
     return isAllLiteral
@@ -499,6 +502,8 @@ export function compileScript(
     computed: 'computed',
     shallowRef: 'shallowRef',
     customRef: 'customRef',
+    watch: 'watch',
+    watchEffect: 'watchEffect',
     toRef: 'toRef'
   }
   for (const key in ctx.userImports) {
@@ -658,7 +663,7 @@ export function compileScript(
       }
 
       // collect watch
-      if (isCallOf(expr, m => m === 'watch')) {
+      if (isCallOf(expr, m => m === vueImportAliases['watch'])) {
         const args = expr.arguments || []
         if (args[0]?.type === 'Identifier') {
           register(
@@ -686,7 +691,7 @@ export function compileScript(
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       }
 
-      if (isCallOf(expr, m => m === 'watchEffect')) {
+      if (isCallOf(expr, m => m === vueImportAliases['watchEffect'])) {
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       }
 
@@ -845,20 +850,17 @@ export function compileScript(
 
   // 2.3. transform <script setup> bindings
   for (const node of scriptSetupAst.body) {
-    if (node.type === 'VariableDeclaration') continue
-    if (node.type === 'ExportDefaultDeclaration') continue
-    if (node.type === 'ExpressionStatement') {
-      if (
-        isCallOf(
-          node.expression,
-          m =>
-            m === 'watch' ||
-            m === 'watchEffect' ||
-            Object.values(LifeCircleHookMap).includes(m)
-        )
-      ) {
-        continue
-      }
+    if (
+      isCallOf(
+        // @ts-expect-error
+        node?.expression,
+        m =>
+          m === vueImportAliases['watch'] ||
+          m === vueImportAliases['watchEffect'] ||
+          Object.values(LifeCircleHookMap).includes(m)
+      )
+    ) {
+      continue
     }
 
     if (node.type.endsWith('Statement') || node.type.endsWith('Expression')) {
@@ -874,6 +876,15 @@ export function compileScript(
                 child.start! + startOffset,
                 child.end! + startOffset,
                 'this.' + child.object.name
+              )
+            }
+          }
+          if (child.type === 'Identifier') {
+            if (['router', 'route', 'emit'].includes(child.name)) {
+              ctx.s.overwrite(
+                child.start! + startOffset,
+                child.end! + startOffset,
+                'this.$' + child.name
               )
             }
           }

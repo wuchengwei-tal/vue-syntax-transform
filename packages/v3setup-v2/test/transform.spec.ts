@@ -170,4 +170,26 @@ div{
 `)
     assertCode(content)
   })
+
+  test('emit, router', () => {
+    const { content } = transform(`
+<script lang="ts" setup>
+const route = useRoute()
+const router = useRouter()
+const path = computed(() => route.path)
+const emit = defineEmits(['change'])
+
+
+onMounted(()=> {
+  emit('change', 1)
+  router.push({path: '/a'})
+  router.go(1)
+})
+emit('change', 2)
+router.replace({path: '/a'})
+</script>
+`)
+
+    assertCode(content)
+  })
 })

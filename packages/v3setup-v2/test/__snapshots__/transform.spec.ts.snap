@@ -42,6 +42,36 @@ exports[`script transform > cssVars 1`] = `
 }}"
 `;
 
+exports[`script transform > emit, router 1`] = `
+"export default {
+  
+  computed: {
+    path() {
+      return this.$route.path;
+    }
+  },
+  mounted() {
+    this.$emit('change', 1);
+    this.$router.push({
+      path: '/a'
+    });
+    this.$router.go(1);
+  }
+,
+  created() {
+
+
+
+
+
+
+
+
+this.$emit('change', 2)
+this.$router.replace({path: '/a'})
+}}"
+`;
+
 exports[`script transform > imports 1`] = `
 "import img from './img.webp';
 import Component from './Component.vue';

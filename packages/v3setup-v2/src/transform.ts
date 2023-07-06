@@ -92,6 +92,12 @@ export function transformBindings(bindings: TransformBindingsMap) {
             }
           }
         }
+
+        if (child.type === 'Identifier') {
+          if (['router', 'route', 'emit'].includes(child.name)) {
+            child.name = 'this.$' + child.name
+          }
+        }
       }
     })
 
