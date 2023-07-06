@@ -6,11 +6,13 @@ describe('script transform', () => {
     const { content, transBindings } = transform(`
 <script lang="ts" setup>
 const nickname = ref('nickname');
-const avatar = ref(img);
+const avatar = ref({img: 'avatar.png'});
 const visible = ref(false);
 const data = reactive({a:1})
 let a = reactive({a:1})
 let b = 1
+
+avatar.value.img = 'new avatar.png'
 </script>
 `)
     assertCode(content)
@@ -139,13 +141,13 @@ watchEffect(()=> {
   test('life cycles hooks', () => {
     const { content } = transform(`
 <script lang="ts" setup>
-const a = ref(1)
+const a = ref({c: 1})
 onMounted(()=> {
-  a.value = 2
+  a.value.c = 2
 })
 
 onUnmounted(()=> {
-  a.value = 3
+  a.value.c = 3
 })
 </script>
 `)

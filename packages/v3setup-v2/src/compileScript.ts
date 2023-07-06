@@ -2,10 +2,10 @@
 import {
   warnOnce,
   DEFAULT_FILENAME,
-  BindingMap,
   BindingTypes,
   registerBinding as register,
-  LifeCircleHookMap
+  LifeCircleHookMap,
+  isMember
 } from '@vue-transform/shared'
 
 import { isFunctionType, walkIdentifiers } from '@vue/compiler-dom'
@@ -23,10 +23,7 @@ import {
   Identifier,
   ExportSpecifier,
   Statement,
-  CallExpression,
-  Expression,
-  ClassDeclaration,
-  FunctionDeclaration
+  CallExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map-js'
@@ -34,7 +31,6 @@ import {
   processNormalScript,
   normalScriptDefaultVar
 } from './script/normalScript'
-import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
 
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 import { transformDestructuredProps } from './script/definePropsDestructure'
@@ -844,6 +840,45 @@ export function compileScript(
           hoistNode(node)
         }
       }
+    }
+  }
+
+  // 2.3. transform <script setup> bindings
+  for (const node of scriptSetupAst.body) {
+    if (node.type === 'VariableDeclaration') continue
+    if (node.type === 'ExportDefaultDeclaration') continue
+    if (node.type === 'ExpressionStatement') {
+      if (
+        isCallOf(
+          node.expression,
+          m =>
+            m === 'watch' ||
+            m === 'watchEffect' ||
+            Object.values(LifeCircleHookMap).includes(m)
+        )
+      ) {
+        continue
+      }
+    }
+
+    if (node.type.endsWith('Statement') || node.type.endsWith('Expression')) {
+      // @ts-expect-error
+      walk(node, {
+        enter(child: Node, parent: Node | undefined) {
+          if (isMember(child)) {
+            if (
+              child.object.type === 'Identifier' &&
+              child.object.name in transBindings
+            ) {
+              ctx.s.overwrite(
+                child.start! + startOffset,
+                child.end! + startOffset,
+                'this.' + child.object.name
+              )
+            }
+          }
+        }
+      })
     }
   }
 

@@ -1,4 +1,9 @@
-import { BindingMap, BindingTypes } from '@vue-transform/shared'
+import {
+  BindingMap,
+  BindingTypes,
+  isEmptyStmt,
+  isMember
+} from '@vue-transform/shared'
 
 import {
   Expression,
@@ -12,6 +17,7 @@ import {
   BlockStatement,
   Function,
   Statement,
+  Node,
   //
   objectProperty,
   identifier,
@@ -21,8 +27,11 @@ import {
   blockStatement,
   returnStatement,
   expressionStatement,
+  memberExpression,
   isFunction
 } from '@babel/types'
+
+import { walk } from 'estree-walker'
 
 const generate = require('@babel/generator').default
 
@@ -53,6 +62,66 @@ export function transformBindings(bindings: TransformBindingsMap) {
     methods: [],
     watch: [],
     hooks: []
+  }
+
+  function transBody(value: BlockStatement | Expression): BlockStatement {
+    // @ts-expect-error
+    walk(value, {
+      enter(child: Node, parent: Node) {
+        if (isMember(child)) {
+          if (
+            child.object.type === 'Identifier' &&
+            child.object.name in bindings
+          ) {
+            if (
+              child.property.type === 'Identifier' &&
+              child.property.name === 'value'
+            ) {
+              if (isMember(parent)) {
+                child.property.name = child.object.name
+                child.object.name = 'this'
+              } else {
+                child.property = identifier(child.object.name)
+                child.object = identifier('this')
+              }
+            } else {
+              child.object = memberExpression(
+                identifier('this'),
+                identifier(child.object.name)
+              )
+            }
+          }
+        }
+      }
+    })
+
+    if (value.type === 'BlockStatement') {
+      value.body = value.body.filter(v => !isEmptyStmt(v))
+      return value
+    } else {
+      const stmt = expressionStatement(value)
+      return blockStatement(isEmptyStmt(stmt) ? [] : [stmt])
+    }
+  }
+
+  function normalizeBody(
+    node: Function,
+    statement: (expr: Expression) => Statement = expressionStatement
+  ) {
+    let body: BlockStatement | undefined
+    if (node.type === 'ArrowFunctionExpression') {
+      if (node.body.type === 'BlockStatement') body = node.body
+      else body = blockStatement([statement(node.body)])
+    }
+    if (
+      node.type === 'FunctionExpression' ||
+      node.type === 'FunctionDeclaration'
+    ) {
+      body = node.body
+    }
+    if (body) body = transBody(body)
+
+    return body
   }
 
   function transWatcher(key: string, value: BindingValue, options: Options) {
@@ -191,22 +260,4 @@ function transState(key: string, value: BindingValue, options: Options) {
     if (type === 'FunctionDeclaration' || type === 'ClassDeclaration') return
     options.data.push(objectProperty(identifier(key), value))
   }
-}
-
-function normalizeBody(
-  node: Function,
-  statement: (expr: Expression) => Statement = expressionStatement
-) {
-  let body: BlockStatement | undefined
-  if (node.type === 'ArrowFunctionExpression') {
-    if (node.body.type === 'BlockStatement') body = node.body
-    else body = blockStatement([statement(node.body)])
-  }
-  if (
-    node.type === 'FunctionExpression' ||
-    node.type === 'FunctionDeclaration'
-  ) {
-    body = node.body
-  }
-  return body
 }

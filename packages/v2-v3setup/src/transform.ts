@@ -17,7 +17,6 @@ import {
   ObjectMethod,
   OptionalMemberExpression,
   program,
-  Statement,
   StringLiteral,
   stringLiteral
 } from '@babel/types'
@@ -36,7 +35,9 @@ import {
   BindingTypes,
   BindingMap,
   registerBinding,
-  LifeCircleHookMap
+  LifeCircleHookMap,
+  isEmptyStmt,
+  isMember
 } from '@vue-transform/shared'
 
 import { RenderFunction, VModel } from './data'
@@ -431,19 +432,4 @@ export function restoreMember(
     const obj = restoreMember(object, n - 1)
     if (obj) return memberExpression(obj, property, computed, optional)
   }
-}
-
-function isMember(
-  node: Node
-): node is MemberExpression | OptionalMemberExpression {
-  return (
-    node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
-  )
-}
-
-function isEmptyStmt(stmt: Statement) {
-  if (stmt.type === 'EmptyStatement') return true
-  if (stmt.type === 'ExpressionStatement') return !stmt.expression
-
-  return false
 }
