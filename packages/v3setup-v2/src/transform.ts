@@ -143,7 +143,7 @@ export function transformBindings(bindings: TransformBindingsMap) {
         const handler = objectMethod(
           'method',
           identifier('handler'),
-          cb.params,
+          transParams(cb.params),
           body
         )
 
@@ -167,8 +167,10 @@ export function transformBindings(bindings: TransformBindingsMap) {
     const body = normalizeBody(value[0])
 
     if (body) {
+      const params = value[0].params
+
       options.hooks.push(
-        objectMethod('method', identifier(key), value[0].params, body)
+        objectMethod('method', identifier(key), transParams(params), body)
       )
     }
   }
@@ -180,7 +182,7 @@ export function transformBindings(bindings: TransformBindingsMap) {
 
     if (body) {
       options.methods.push(
-        objectMethod('method', identifier(key), value.params, body)
+        objectMethod('method', identifier(key), transParams(value.params), body)
       )
     }
   }
@@ -269,4 +271,16 @@ function transState(key: string, value: BindingValue, options: Options) {
     if (type === 'FunctionDeclaration' || type === 'ClassDeclaration') return
     options.data.push(objectProperty(identifier(key), value))
   }
+}
+
+function transParams(params: Function['params']) {
+  for (const param of params) {
+    if ('typeAnnotation' in param) {
+      param.typeAnnotation = null
+    }
+    if ('optional' in param) {
+      param.optional = false
+    }
+  }
+  return params as ObjectMethod['params']
 }

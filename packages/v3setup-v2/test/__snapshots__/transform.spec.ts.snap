@@ -75,6 +75,7 @@ this.$router.replace({path: '/a'})
 exports[`script transform > imports 1`] = `
 "import img from './img.webp';
 import Component from './Component.vue';
+
 import { Checkbox } from 'ant-design-vue';
 
 export default {
@@ -144,10 +145,10 @@ exports[`script transform > methods 1`] = `
     }
   },
   methods: {
-    changeName() {
+    changeName(a) {
       this.nickname = 'new nickname';
     },
-    changeAge() {
+    changeAge(b) {
       this.age = 20;
     }
   }
@@ -214,6 +215,20 @@ exports[`script transform > ref 1`] = `
 let b = 1
 
 this.avatar.img = 'new avatar.png'
+}}"
+`;
+
+exports[`script transform > types 1`] = `
+"const Enum = {
+  A : 'a',
+}
+
+export default {
+  created() {
+
+
+
+
 }}"
 `;
 

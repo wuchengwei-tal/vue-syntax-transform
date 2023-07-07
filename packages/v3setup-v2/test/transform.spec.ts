@@ -5,11 +5,11 @@ describe('script transform', () => {
   test('ref', () => {
     const { content, transBindings } = transform(`
 <script lang="ts" setup>
-const nickname = ref('nickname');
-const avatar = ref({img: 'avatar.png'});
-const visible = ref(false);
-const data = reactive({a:1})
-let a = reactive({a:1})
+const nickname = ref<string>('nickname');
+const avatar = ref<{img:string}>({img: 'avatar.png'});
+const visible = ref<boolean>(false);
+const data = reactive<{a:number}>({a:1})
+let a = reactive<{a:number}>({a:1})
 let b = 1
 
 avatar.value.img = 'new avatar.png'
@@ -50,7 +50,8 @@ defineOptions({
 <script lang="ts" setup>
 import img from './img.webp';
 import Component from './Component.vue';
-import { Checkbox } from 'ant-design-vue';
+import type { CheckboxChangeEvent } from 'ant-design-vue';
+import { type CheckboxGroupProps, Checkbox } from 'ant-design-vue';
 </script>
 `)
     assertCode(content)
@@ -78,11 +79,11 @@ const nickname = ref('nickname');
 const name = computed(() => nickname.value);
 const age = computed(() => 18);
 
-function changeName() {
+function changeName(a?: any) {
   nickname.value = 'new nickname'
 }
 
-const changeAge = () => {
+const changeAge = (b? :any) => {
   age.value = 20
 }
 </script>
@@ -201,6 +202,25 @@ const props = defineProps<{a?:number}>()
 const a = computed(()=> props.a)
 console.log(props.a)
 `)
+    assertCode(content)
+  })
+
+  test('types', () => {
+    const { content } = transform(`
+<script lang="ts" setup>
+type A = {
+  a: number
+}
+interface B {
+  b: string
+}
+
+enum Enum {
+  A = 'a',
+}
+</script>
+`)
+
     assertCode(content)
   })
 })

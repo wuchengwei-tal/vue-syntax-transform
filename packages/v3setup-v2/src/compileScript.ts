@@ -488,8 +488,18 @@ export function compileScript(
             !options.inlineTemplate
           )
         }
+        if (
+          specifier.type === 'ImportSpecifier' &&
+          specifier.importKind === 'type'
+        ) {
+          removeSpecifier(i)
+        }
       }
       if (node.specifiers.length && removed === node.specifiers.length) {
+        ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+      }
+
+      if (node.importKind === 'type') {
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       }
     }
@@ -842,7 +852,15 @@ export function compileScript(
         (node.type === 'VariableDeclaration' && node.declare)
       ) {
         if (node.type !== 'TSEnumDeclaration') {
-          hoistNode(node)
+          // hoistNode(node)
+          ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+        } else {
+          const loc = [node.start! + startOffset, node.end! + startOffset]
+          let original = ctx.source.slice(loc[0], loc[1])
+          original = original.replace(/enum/, 'const')
+          original = original.replace('=', ':')
+          original = original.replace(node.id.name, node.id.name + ' =')
+          ctx.s.overwrite(loc[0], loc[1], original)
         }
       }
     }
