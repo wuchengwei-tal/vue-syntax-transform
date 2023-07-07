@@ -164,6 +164,27 @@ exports[`script transform > methods 1`] = `
 }}"
 `;
 
+exports[`script transform > props 1`] = `
+"export default {
+  props: {
+    a: { type: Number, required: false }
+  },
+  
+  computed: {
+    a() {
+      return this.a;
+    }
+  }
+,
+  created() {
+
+
+
+
+console.log(this.a)
+}}"
+`;
+
 exports[`script transform > ref 1`] = `
 "export default {
   

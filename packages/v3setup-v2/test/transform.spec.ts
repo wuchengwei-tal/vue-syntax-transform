@@ -192,4 +192,15 @@ router.replace({path: '/a'})
 
     assertCode(content)
   })
+
+  test('props', () => {
+    const { content } = transform(`
+<script lang="ts" setup>
+const props = defineProps<{a?:number}>()
+
+const a = computed(()=> props.a)
+console.log(props.a)
+`)
+    assertCode(content)
+  })
 })

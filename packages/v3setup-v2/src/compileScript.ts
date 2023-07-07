@@ -880,12 +880,12 @@ export function compileScript(
             }
           }
           if (child.type === 'Identifier') {
+            const loc = [child.start! + startOffset, child.end! + startOffset]
             if (['router', 'route', 'emit'].includes(child.name)) {
-              ctx.s.overwrite(
-                child.start! + startOffset,
-                child.end! + startOffset,
-                'this.$' + child.name
-              )
+              ctx.s.overwrite(loc[0], loc[1], 'this.$' + child.name)
+            }
+            if (['props', '__props'].includes(child.name)) {
+              ctx.s.overwrite(loc[0], loc[1], 'this')
             }
           }
         }
@@ -1003,12 +1003,12 @@ export function compileScript(
   // inject user assignment of props
   // we use a default __props so that template expressions referencing props
   // can use it directly
-  if (ctx.propsIdentifier) {
-    ctx.s.prependLeft(
-      startOffset,
-      `\nconst ${ctx.propsIdentifier} = __props;\n`
-    )
-  }
+  // if (ctx.propsIdentifier) {
+  //   ctx.s.prependLeft(
+  //     startOffset,
+  //     `\nconst ${ctx.propsIdentifier} = __props;\n`
+  //   )
+  // }
   if (ctx.propsDestructureRestId) {
     ctx.s.prependLeft(
       startOffset,

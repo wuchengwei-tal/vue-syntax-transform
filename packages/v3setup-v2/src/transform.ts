@@ -97,6 +97,9 @@ export function transformBindings(bindings: TransformBindingsMap) {
           if (['router', 'route', 'emit'].includes(child.name)) {
             child.name = 'this.$' + child.name
           }
+          if (['props', '__props'].includes(child.name)) {
+            child.name = 'this'
+          }
         }
       }
     })
