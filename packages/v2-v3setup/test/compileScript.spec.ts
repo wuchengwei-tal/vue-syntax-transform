@@ -130,7 +130,8 @@ describe('script transform', () => {
     </script>
     `).script!
     expect(content).toMatch('const listRef = ref()')
-    expect(content).toMatch(' listRef.page')
+    expect(content).not.toMatch('this.$refs')
+    expect(content).toMatch(' listRef.value.page')
     expect(content).not.toMatch('mounted(')
     expect(content).toMatch('onMounted(()')
 
@@ -185,7 +186,7 @@ describe('script transform', () => {
           this.$store.dispatch('getServerTime');
           this.$store.registerModule('module');
           this.$store.unregisterModule('module');
-          const a = this.$store.state.a;
+          const a = this.$store.state.a.b;
           const b = this.$store.getter.b;
         },
       }
@@ -197,7 +198,7 @@ describe('script transform', () => {
     expect(content).not.toMatch(`unregisterModule`)
     expect(content).toMatch(` setLoadingState(false)`)
     expect(content).toMatch(` getServerTime()`)
-    expect(content).toMatch(`const a = a`)
+    expect(content).toMatch(`const a = a.b`)
     expect(content).toMatch(`const b = b`)
 
     assertCode(content)

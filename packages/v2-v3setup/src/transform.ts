@@ -1,24 +1,26 @@
 import {
-  arrayExpression,
   ArrowFunctionExpression,
-  arrowFunctionExpression,
-  blockStatement,
   BlockStatement,
   Expression,
-  expressionStatement,
-  functionDeclaration,
+  StringLiteral,
   Identifier,
-  isExpression,
   MemberExpression,
-  memberExpression,
   Node,
-  objectExpression,
   ObjectExpression,
   ObjectMethod,
   OptionalMemberExpression,
+  //
+  arrayExpression,
+  arrowFunctionExpression,
+  blockStatement,
+  expressionStatement,
+  functionDeclaration,
+  isExpression,
+  memberExpression,
   program,
-  StringLiteral,
-  stringLiteral
+  objectExpression,
+  stringLiteral,
+  isFunction
 } from '@babel/types'
 
 import {
@@ -170,24 +172,22 @@ export function transformBindings(
 
   type Ctx = {
     inFuncBody: boolean
-    membersCount: number
-    members: (MemberExpression | OptionalMemberExpression)[]
-    transformedMember?: MemberExpression | OptionalMemberExpression | Identifier
+    members: [
+      Node | undefined,
+      ...(MemberExpression | OptionalMemberExpression)[]
+    ]
     thisAlias: string[]
   }
   function transBody(value: BlockStatement | Expression): BlockStatement {
     const ctx: Ctx = {
       inFuncBody: false,
-      membersCount: 0,
-      members: [],
+      members: [undefined],
       thisAlias: []
     }
-    const block: typeof value = (walk as any)(value, {
-      enter(child: Node, _parent: Node) {
-        if (
-          child.type === 'FunctionDeclaration' ||
-          child.type === 'FunctionExpression'
-        ) {
+    let inMember = false
+    ;(walk as any)(value, {
+      enter(child: Node, parent: Node) {
+        if (isFunction(child)) {
           ctx.inFuncBody = true
         }
 
@@ -225,11 +225,14 @@ export function transformBindings(
         }
 
         if (isMember(child)) {
+          if (inMember === false) ctx.members[0] = parent
           ctx.members?.push(child)
-          ctx.membersCount += 1
+          inMember = true
           const node = transBinding(child, ctx)
           node && this.replace(node)
-          if (!ctx.membersCount) this.remove()
+        } else {
+          inMember = false
+          ctx.members = [undefined]
         }
 
         if (child.type === 'CallExpression' && isMember(child.callee)) {
@@ -275,22 +278,16 @@ export function transformBindings(
           }
         }
       },
-      leave(node: Node) {
-        if (node.type === 'FunctionDeclaration') ctx.inFuncBody = false
-        if (isMember(node)) {
-          ctx.membersCount = Math.max(ctx.membersCount - 1, 0)
-          ctx.members.pop()
-          if (!ctx.members.length && ctx.transformedMember)
-            this.replace(ctx.transformedMember)
-        }
+      leave(child: Node, _parent: Node) {
+        if (isFunction(child)) ctx.inFuncBody = false
       }
     })
 
-    if (block.type === 'BlockStatement') {
-      block.body = block.body.filter(v => !isEmptyStmt(v))
-      return block
+    if (value.type === 'BlockStatement') {
+      value.body = value.body.filter(v => !isEmptyStmt(v))
+      return value
     } else {
-      const stmt = expressionStatement(block)
+      const stmt = expressionStatement(value)
       return blockStatement(isEmptyStmt(stmt) ? [] : [stmt])
     }
   }
@@ -353,19 +350,38 @@ export function transformBindings(
       return id
     }
 
-    const { members, membersCount } = ctx
-    const idx = membersCount - 1
-    if (name === 'refs') {
-      const member = members[idx - 1]
+    const { members } = ctx
+    const idx = members.length - 2
+    const member = members[idx]
+    if (name === 'refs' && isMember(member!)) {
       const { property: p } = member
       if (p.type === 'Identifier') {
         const ref = callExpression(identifier('ref'), [])
         registerBinding(bindings, p, ref, BindingTypes.$)
-        ctx.transformedMember = restoreMember(members[0], idx)
+        const transformedMember = restoreMember(members[1], idx)
+
+        if (transformedMember?.type === 'Identifier') {
+          members[1].object = members[1].property as Identifier
+          members[1].property = identifier('value')
+        } else if (transformedMember?.object) {
+          members[1].object = memberExpression(
+            transformedMember.object,
+            identifier('value')
+          )
+        }
       }
     }
     if (name === 'store') {
-      ctx.transformedMember = restoreMember(members[0], idx - 1)
+      const transformedMember = restoreMember(members[1], idx - 1)
+      const parent = members[0]!
+      ;(Object.keys(parent) as (keyof Node)[]).forEach(key => {
+        const child = parent[key]
+        // @ts-expect-error
+        if (parent[key]?.start === members[1].start) {
+          // @ts-expect-error
+          parent[key] = transformedMember
+        }
+      })
     }
   }
 

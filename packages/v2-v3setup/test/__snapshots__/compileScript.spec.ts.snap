@@ -3,7 +3,7 @@
 exports[`script transform > $refs 1`] = `
 "const listRef = ref();
 onMounted(() => {
-  listRef.page;
+  listRef.value.page;
 });"
 `;
 
@@ -82,7 +82,7 @@ exports[`script transform > vuex 1`] = `
 "{
   setLoadingState(false);
   getServerTime();
-  const a = a;
+  const a = a.b;
   const b = b;
 }"
 `;
