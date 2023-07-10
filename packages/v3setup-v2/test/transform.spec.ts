@@ -144,7 +144,7 @@ watchEffect(()=> {
     const { content } = transform(`
 <script lang="ts" setup>
 const a = ref({c: 1})
-onMounted(()=> {
+onMounted(async ()=> {
   a.value.c = 2
 })
 

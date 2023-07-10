@@ -176,7 +176,15 @@ export function transformBindings(bindings: TransformBindingsMap) {
       const params = value[0].params
 
       options.hooks.push(
-        objectMethod('method', identifier(key), transParams(params), body)
+        objectMethod(
+          'method',
+          identifier(key),
+          transParams(params),
+          body,
+          false,
+          value[0].generator,
+          value[0].async
+        )
       )
     }
   }
