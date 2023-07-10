@@ -21,11 +21,15 @@
     "commands": [
       {
         "command": "vue-transform.reactivityTransform",
-        "title": "Vue Reactivity Transform"
+        "title": "[Vue Syntax Transform] Reactivity Transform"
       },
       {
         "command": "vue-transform.v2ToV3Setup",
-        "title": "Vue2 to Vue3 Setup Syntax"
+        "title": "[Vue Syntax Transform] Vue2 to Vue3 Setup"
+      },
+      {
+        "command": "vue-transform.v3SetupToV2",
+        "title": "[Vue Syntax Transform] Vue3 Setup to Vue2"
       }
     ]
   },

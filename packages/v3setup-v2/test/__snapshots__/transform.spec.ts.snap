@@ -94,7 +94,7 @@ exports[`script transform > life cycles hooks 1`] = `
       }
     };
   },
-  mounted() {
+  async mounted() {
     this.a.c = 2;
   },
   destroyed() {

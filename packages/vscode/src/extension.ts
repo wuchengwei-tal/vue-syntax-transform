@@ -3,6 +3,7 @@ import { type ExtensionContext, window, commands } from 'vscode'
 import { minimalEdit } from './utils'
 import { sfcTransform as v2ToV3Setup } from '../../v2-v3setup'
 import { reactivityTransform } from '../../reactivity-transform'
+import { v3SetupToV2 } from '../../v3setup-v2'
 
 function wrapTag(
   src: string,
@@ -70,6 +71,13 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand(
       'vue-transform.v2ToV3Setup',
       transform(v2ToV3Setup)
+    )
+  )
+
+  disposables.push(
+    commands.registerCommand(
+      'vue-transform.v3SetupToV2',
+      transform(v3SetupToV2)
     )
   )
 
