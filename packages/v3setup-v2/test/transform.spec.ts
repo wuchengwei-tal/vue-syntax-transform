@@ -5,6 +5,7 @@ describe('script transform', () => {
   test('ref', () => {
     const { content, transBindings } = transform(`
 <script lang="ts" setup>
+const undef = ref();
 const nickname = ref<string>('nickname');
 const avatar = ref<{img:string}>({img: 'avatar.png'});
 const visible = ref<boolean>(false);
@@ -221,6 +222,26 @@ enum Enum {
 </script>
 `)
 
+    assertCode(content)
+  })
+
+  test('template reference', () => {
+    const { content } = transform(`
+<script lang="ts" setup>
+const divRef = ref<HTMLDivElement>()
+const spanRef = ref<HTMLDivElement|null>(null)
+
+onMounted(()=> {
+  divRef.value?.focus()
+  spanRef.value?.click()
+})
+</script>
+
+<template>
+  <div ref="divRef"></div>
+  <span ref="spanRef"></span>
+</template>
+`)
     assertCode(content)
   })
 })

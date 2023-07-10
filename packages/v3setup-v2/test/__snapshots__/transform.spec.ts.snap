@@ -191,6 +191,7 @@ exports[`script transform > ref 1`] = `
   
   data() {
     return {
+      undef: undefined,
       nickname: 'nickname',
       avatar: {
         img: 'avatar.png'
@@ -212,9 +213,33 @@ exports[`script transform > ref 1`] = `
 
 
 
+
 let b = 1
 
 this.avatar.img = 'new avatar.png'
+}}"
+`;
+
+exports[`script transform > template reference 1`] = `
+"export default {
+  
+  data() {
+    return {
+      divRef: undefined,
+      spanRef: null
+    };
+  },
+  mounted() {
+    this.$refs.divRef?.focus();
+    this.$refs.spanRef?.click();
+  }
+,
+  created() {
+
+
+
+
+
 }}"
 `;
 

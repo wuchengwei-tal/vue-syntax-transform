@@ -8,7 +8,12 @@ import {
   isMember
 } from '@vue-transform/shared'
 
-import { isFunctionType, walkIdentifiers } from '@vue/compiler-dom'
+import {
+  ElementNode,
+  TemplateChildNode,
+  isFunctionType,
+  walkIdentifiers
+} from '@vue/compiler-dom'
 import {
   SFCDescriptor,
   SFCScriptBlock,
@@ -162,7 +167,7 @@ export function compileScript(
   }
 
   const ctx = new ScriptCompileContext(sfc, options)
-  const { script, scriptSetup, source, filename } = sfc
+  const { script, template, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
@@ -199,6 +204,7 @@ export function compileScript(
   const transBindings: TransformBindingsMap = Object.create(null)
   transBindings.watch = Object.create(null)
   transBindings.$hooks = Object.create(null)
+  transBindings.$refs = Object.create(null)
 
   let defaultExport: Node | undefined
   let hasAwait = false
@@ -520,6 +526,9 @@ export function compileScript(
     const { source, imported, local } = ctx.userImports[key]
     if (source === 'vue') vueImportAliases[imported] = local
   }
+
+  // 1.4 template reference bindings
+  template && walkTemplate(template.ast, transBindings)
 
   // 2.1 process normal <script> body
   if (script && scriptAst) {
@@ -1302,4 +1311,24 @@ function isStaticNode(node: Node): boolean {
       return true
   }
   return false
+}
+
+function walkTemplate(
+  node: ElementNode | TemplateChildNode,
+  bindings: TransformBindingsMap
+) {
+  if ('children' in node) {
+    for (const child of node.children) {
+      if (typeof child === 'string' || typeof child === 'symbol') continue
+      // console.log(child)
+      if ('type' in child && child.type === 1) {
+        child?.props?.find((prop: any) => {
+          if (prop?.name === 'ref') {
+            register(bindings.$refs, prop?.value?.content, null, BindingTypes.$)
+          }
+        })
+        walkTemplate(child, bindings)
+      }
+    }
+  }
 }

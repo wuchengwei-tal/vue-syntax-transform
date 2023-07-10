@@ -18,6 +18,7 @@ import {
   Function,
   Statement,
   Node,
+  MemberExpression,
   //
   objectProperty,
   identifier,
@@ -45,6 +46,7 @@ export type BindingValue =
 export type TransformBindingsMap = BindingMap<BindingValue> & {
   watch: BindingMap<BindingValue>
   $hooks: BindingMap<BindingValue>
+  $refs: BindingMap<null>
 }
 
 type Options = {
@@ -73,20 +75,24 @@ export function transformBindings(bindings: TransformBindingsMap) {
             child.object.type === 'Identifier' &&
             child.object.name in bindings
           ) {
+            let _this: Identifier | MemberExpression = identifier('this')
+            if (child.object.name in bindings.$refs) {
+              _this = memberExpression(_this, identifier('$refs'))
+            }
             if (
               child.property.type === 'Identifier' &&
               child.property.name === 'value'
             ) {
               if (isMember(parent)) {
                 child.property.name = child.object.name
-                child.object.name = 'this'
+                child.object = _this
               } else {
                 child.property = identifier(child.object.name)
-                child.object = identifier('this')
+                child.object = _this
               }
             } else {
               child.object = memberExpression(
-                identifier('this'),
+                _this,
                 identifier(child.object.name)
               )
             }
@@ -258,6 +264,7 @@ export function transformBindings(bindings: TransformBindingsMap) {
 
 function transState(key: string, value: BindingValue, options: Options) {
   if (Array.isArray(value)) {
+    if (!value.length) value[0] = identifier('undefined')
     const { type } = value[0]
     if (
       type === 'SpreadElement' ||
