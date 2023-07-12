@@ -177,7 +177,8 @@ export function templateTransform(template: Template): { content: string } {
       // @ts-ignore
       const { type, start, end } = child
       if (type === Expression && isFilter(child.expression)) {
-        const val = trans(child.expression)
+        let val = trans(child.expression)
+        if (/\{\{.*\}\}/.test(child.text)) val = `{{ ${val} }}`
         if (val) s.overwrite(start + offset, end + offset, val)
       }
 

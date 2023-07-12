@@ -165,7 +165,7 @@ describe('Template Directives', () => {
 
     const { content } = template!
     expect(content).not.toMatch('|')
-    expect(content).toMatch('<p>currencyUSD(accountBalance)</p>')
+    expect(content).toMatch('<p>{{ currencyUSD(accountBalance) }}</p>')
     expect(content).toMatch(':attr="currencyUSD(accountBalance)"')
   })
 })
