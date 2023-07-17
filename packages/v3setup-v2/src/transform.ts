@@ -158,7 +158,7 @@ export function transformBindings(bindings: TransformBindingsMap) {
             key.includes('.') ? stringLiteral(key) : identifier(key),
             objectExpression([
               handler,
-              ...(opts as ObjectExpression).properties
+              ...((opts as ObjectExpression)?.properties || [])
             ])
           )
         )
