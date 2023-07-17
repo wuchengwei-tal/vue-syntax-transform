@@ -15,7 +15,9 @@ function _cssTransform(css: string, raw = '') {
   function transDimension(node: Dimension) {
     if (node.unit === 'rem') {
       let { start, end } = node.loc!
-      const val = parseFloat(node.value) * RATIO + 'px'
+      let val: string | number = parseFloat(node.value) * RATIO
+      val = Number.isInteger(val) ? val : val.toFixed(2)
+      val = val + 'px'
       s.overwrite(start.offset, end.offset, val)
     }
   }
