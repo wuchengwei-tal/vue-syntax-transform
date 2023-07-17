@@ -11,12 +11,18 @@ importers:
       '@babel/generator':
         specifier: ^7.21.9
         version: registry.npmmirror.com/@babel/generator@7.21.9
+      '@babel/parser':
+        specifier: ^7.21.9
+        version: 7.21.9
       '@babel/traverse':
         specifier: ^7.21.5
         version: registry.npmmirror.com/@babel/traverse@7.21.5
       '@babel/types':
         specifier: ^7.21.5
         version: 7.21.5
+      '@vue-transform/shared':
+        specifier: workspace:*
+        version: link:packages/shared
       '@vue/shared':
         specifier: ^3.2.47
         version: 3.2.47
@@ -36,9 +42,6 @@ importers:
         specifier: ^6.7.0
         version: 6.7.0(typescript@5.0.4)
     devDependencies:
-      '@babel/parser':
-        specifier: ^7.21.9
-        version: 7.21.9
       '@types/css-tree':
         specifier: ^2.3.1
         version: registry.npmmirror.com/@types/css-tree@2.3.1
@@ -57,9 +60,6 @@ importers:
       '@vscode/test-electron':
         specifier: ^2.3.2
         version: 2.3.2
-      '@vue-transform/shared':
-        specifier: workspace:*
-        version: link:packages/shared
       eslint:
         specifier: ^8.41.0
         version: 8.41.0
@@ -153,8 +153,8 @@ importers:
         specifier: 20.2.5
         version: 20.2.5
       '@types/vscode':
-        specifier: ^1.78.1
-        version: 1.78.1
+        specifier: ^1.80.0
+        version: registry.npmmirror.com/@types/vscode@1.80.0
       '@typescript-eslint/eslint-plugin':
         specifier: ^5.59.7
         version: 5.59.7(@typescript-eslint/parser@5.59.7)(eslint@8.41.0)(typescript@5.0.4)
@@ -180,15 +180,19 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4
 
+  packages/vuex: {}
+
 packages:
 
   /@babel/helper-string-parser@7.21.5:
     resolution: {integrity: sha512-5pTUx3hAJaZIdW99sJ6ZUUgWq/Y+Hja7TowEnLNMm1VivRgZQL3vpBY3qUACVsvw+yQU6+YgfBVmcbLaZtrA1w==}
     engines: {node: '>=6.9.0'}
+    dev: false
 
   /@babel/helper-validator-identifier@7.19.1:
     resolution: {integrity: sha512-awrNfaMtnHUr653GgGEs++LlAvW6w+DcPrOliSMXWCKo597CwL5Acf/wWdNkf/tfEQE3mjkeD1YOVZOUV/od1w==}
     engines: {node: '>=6.9.0'}
+    dev: false
 
   /@babel/parser@7.21.9:
     resolution: {integrity: sha512-q5PNg/Bi1OpGgx5jYlvWZwAorZepEudDMCLtj967aeS7WMont7dUZI46M2XwcIQqvUlMxWfdLFu4S/qSxeUu5g==}
@@ -196,7 +200,7 @@ packages:
     hasBin: true
     dependencies:
       '@babel/types': 7.21.5
-    dev: true
+    dev: false
 
   /@babel/types@7.21.5:
     resolution: {integrity: sha512-m4AfNvVF2mVC/F7fDEdH2El3HzUg9It/XsCxZiOTTA3m3qYfcSVSbTfM6Q9xG+hYDniZssYhlXKKUMD5m8tF4Q==}
@@ -205,6 +209,7 @@ packages:
       '@babel/helper-string-parser': 7.21.5
       '@babel/helper-validator-identifier': 7.19.1
       to-fast-properties: 2.0.0
+    dev: false
 
   /@eslint-community/eslint-utils@4.4.0(eslint@8.41.0):
     resolution: {integrity: sha512-1/sA4dwrzBAyeUoQ6oxahHKmrZvsnLCg4RfxW3ZFGGmQkSNQPFNLV9CUEFQP1x9EYXHTo5p6xdhZM1Ne9p/AfA==}
@@ -340,10 +345,6 @@ packages:
 
   /@types/semver@7.3.13:
     resolution: {integrity: sha512-21cFJr9z3g5dW8B0CVI9g2O9beqaThGQ6ZFBqHfwhzLDKUxaqTIy3vnfah/UPkfOiF2pLq+tGz+W8RyCskuslw==}
-    dev: true
-
-  /@types/vscode@1.78.1:
-    resolution: {integrity: sha512-wEA+54axejHu7DhcUfnFBan1IqFD1gBDxAFz8LoX06NbNDMRJv/T6OGthOs52yZccasKfN588EyffHWABkR0fg==}
     dev: true
 
   /@typescript-eslint/eslint-plugin@5.59.7(@typescript-eslint/parser@5.59.7)(eslint@8.41.0)(typescript@5.0.4):
@@ -2490,6 +2491,7 @@ packages:
   /to-fast-properties@2.0.0:
     resolution: {integrity: sha512-/OaKK0xYrs3DmxRYqL/yDc+FxFUVYhDlXMhRmv3z915w2HF1tnN1omB354j8VUGO/hbRzyD6Y3sA7v7GS/ceog==}
     engines: {node: '>=4'}
+    dev: false
 
   /to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -3599,6 +3601,12 @@ packages:
     resolution: {integrity: sha512-/fvYntiO1GeICvqbQ3doGDIP97vWmvFt83GKguJ6prmQM2iXZfFcq6YE8KteFyRtX2/h5Hf91BYvPodJKFYv5Q==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/mocha/-/mocha-10.0.1.tgz}
     name: '@types/mocha'
     version: 10.0.1
+    dev: true
+
+  registry.npmmirror.com/@types/vscode@1.80.0:
+    resolution: {integrity: sha512-qK/CmOdS2o7ry3k6YqU4zD3R2AYlJfbwBoSbKpBoP+GpXNE+0NEgJOli4n0bm0diK5kfBnchgCEj4igQz/44Hg==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/vscode/-/vscode-1.80.0.tgz}
+    name: '@types/vscode'
+    version: 1.80.0
     dev: true
 
   registry.npmmirror.com/@vue/compiler-core@3.3.4:
