@@ -1,8 +1,38 @@
 import type { ClassSelector, CssNode, Dimension, Raw, Selector } from 'css-tree'
 import MagicString from 'magic-string'
+
+import { workspace } from 'vscode'
+import { computed, reactive, ref } from '@vue/reactivity'
+
 const csstree = require('css-tree')
 
-const RATIO = 100
+const _configState = ref(0)
+function getConfig<T = any>(key: string): T | undefined {
+  return workspace.getConfiguration().get<T>(key)
+}
+
+async function setConfig(key: string, value: any, isGlobal = true) {
+  // update value
+  return await workspace.getConfiguration().update(key, value, isGlobal)
+}
+
+function createConfigRef<T>(key: string, defaultValue: T, isGlobal = true) {
+  return computed({
+    get: () => {
+      // to force computed update
+      // eslint-disable-next-line no-unused-expressions
+      _configState.value
+      return getConfig<T>(key) ?? defaultValue
+    },
+    set: (v: T) => {
+      setConfig(key, v, isGlobal)
+    }
+  })
+}
+
+export const config = reactive({
+  ratio: createConfigRef(`${'vue-transform'}.css-ratio`, true)
+})
 
 export function cssTransform(css: string) {
   return _cssTransform(transComment(css))
@@ -15,7 +45,7 @@ function _cssTransform(css: string, raw = '') {
   function transDimension(node: Dimension) {
     if (node.unit === 'rem') {
       let { start, end } = node.loc!
-      let val: string | number = parseFloat(node.value) * RATIO
+      let val: string | number = parseFloat(node.value) * (config.ratio || 100)
       val = Number.isInteger(val) ? val : val.toFixed(2)
       val = val + 'px'
       s.overwrite(start.offset, end.offset, val)

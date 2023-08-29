@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/index.ts",
   "dependencies": {
+    "@vue/reactivity": "^3.3.4",
     "vue-template-compiler": "^2.7.14"
   }
 }

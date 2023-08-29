@@ -35,7 +35,18 @@
         "command": "vue-transform.vuexTransform",
         "title": "[Vue Syntax Transform] Vuex Transform"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Vue Transform",
+      "properties": {
+        "vue-transform.css-ratio": {
+          "type": "number",
+          "default": 100,
+          "description": "css transform ratio"
+        }
+      }
+    }
   },
   "scripts": {
     "vsix": "tsup && vsce package",
